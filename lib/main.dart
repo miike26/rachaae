@@ -8,6 +8,7 @@ import 'models/racha_model.dart';
 import 'models/expense_model.dart';
 import 'services/storage_service.dart';
 import 'utils/color_helper.dart';
+import 'utils/material_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,38 +24,8 @@ class MyApp extends StatelessWidget {
       title: 'Bora Rachar?',
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: const ColorScheme(
-          brightness: Brightness.light,
-          primary: Color(0xFF415F91),
-          onPrimary: Color(0xFFFFFFFF),
-          primaryContainer: Color(0xFFD6E3FF),
-          onPrimaryContainer: Color(0xFF001B3E),
-          secondary: Color(0xFF565F71),
-          onSecondary: Color(0xFFFFFFFF),
-          secondaryContainer: Color(0xFFDAE2F9),
-          onSecondaryContainer: Color(0xFF131C2B),
-          tertiary: Color(0xFF705575),
-          onTertiary: Color(0xFFFFFFFF),
-          tertiaryContainer: Color(0xFFFAD8FD),
-          onTertiaryContainer: Color(0xFF28132E),
-          error: Color(0xFFBA1A1A),
-          onError: Color(0xFFFFFFFF),
-          errorContainer: Color(0xFFFFDAD6),
-          onErrorContainer: Color(0xFF410002),
-          background: Color(0xFFF9F9FF),
-          onBackground: Color(0xFF191C20),
-          surface: Color(0xFFF9F9FF),
-          onSurface: Color(0xFF191C20),
-          surfaceVariant: Color(0xFFE0E2EC),
-          onSurfaceVariant: Color(0xFF44474E),
-          outline: Color(0xFF74777F),
-          shadow: Color(0xFF000000),
-          inverseSurface: Color(0xFF2E3036),
-          onInverseSurface: Color(0xFFF0F0F7),
-          inversePrimary: Color(0xFFAAC7FF),
-          surfaceTint: Color(0xFF415F91),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF9F9FF),
+        colorScheme: MaterialTheme.lightMediumContrastScheme(),
+        // scaffoldBackgroundColor: const Color(0xFFF9F9FF),
         // **FONTE ALTERADA PARA ROBOTO**
         textTheme: GoogleFonts.robotoTextTheme(Theme.of(context).textTheme),
         cardTheme: CardThemeData(
@@ -62,19 +33,6 @@ class MyApp extends StatelessWidget {
           color: const Color(0xFFFFFFFF),
           surfaceTintColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF415F91),
-            foregroundColor: const Color(0xFFFFFFFF),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFF9F9FF),
-          elevation: 0,
-          scrolledUnderElevation: 0,
         ),
       ),
       home: const MainScreen(),
