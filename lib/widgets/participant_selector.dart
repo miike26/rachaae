@@ -65,60 +65,77 @@ class _ParticipantSelectorState extends State<ParticipantSelector> {
           onTap: _toggleSelectAll,
         ),
         Container(
-          padding: const EdgeInsets.all(12.0),
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Wrap(
-            spacing: 12.0,
-            runSpacing: 12.0,
-            // **ALINHAMENTO CORRIGIDO**
-            alignment: WrapAlignment.center,
-            children: widget.allParticipants.map((name) {
-              final isSelected = _selectedParticipants.contains(name);
-              final color = ColorHelper.getColorForName(name);
+  width: double.infinity,
+  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+  decoration: BoxDecoration(
+    color: Colors.grey.withOpacity(0.1),
+    borderRadius: BorderRadius.circular(16),
+  ),
+  child: LayoutBuilder(
+    builder: (context, constraints) {
+      double containerWidth = constraints.maxWidth;
+      double itemWidth = 75;
+      int itemsPerRow = (containerWidth / itemWidth).floor();
+      double totalItemWidth = itemsPerRow * itemWidth;
+      double remainingSpace = containerWidth - totalItemWidth;
+      double spacing = itemsPerRow > 1
+          ? remainingSpace / (itemsPerRow - 1)
+          : 0;
 
-              return GestureDetector(
-                onTap: () => _toggleParticipant(name),
-                child: SizedBox(
-                  width: 75,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOut,
-                        padding: EdgeInsets.all(isSelected ? 3 : 0),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? Colors.greenAccent.shade400 : Colors.transparent,
-                        ),
-                        child: CircleAvatar(
-                          radius: 28,
-                          backgroundColor: color,
-                          child: isSelected
-                              ? const Icon(Icons.check, color: Colors.white, size: 28)
-                              : Text(
-                                  name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        name,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                      ),
-                    ],
+      return Wrap(
+        spacing: spacing,
+        runSpacing: 12.0,
+        alignment: WrapAlignment.start,
+        children: widget.allParticipants.map((name) {
+          final isSelected = _selectedParticipants.contains(name);
+          final color = ColorHelper.getColorForName(name);
+
+          return GestureDetector(
+            onTap: () => _toggleParticipant(name),
+            child: SizedBox(
+              width: itemWidth,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    padding: EdgeInsets.all(isSelected ? 3 : 0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isSelected ? Colors.greenAccent.shade400 : Colors.transparent,
+                    ),
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: color,
+                      child: isSelected
+                          ? const Icon(Icons.check, color: Colors.white, size: 28)
+                          : Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 20,
+                              ),
+                            ),
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
+                  const SizedBox(height: 6),
+                  Text(
+                    name,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      );
+    },
+  ),
+)
       ],
     );
   }

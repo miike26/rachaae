@@ -11,6 +11,7 @@ import 'edit_racha_screen.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/participant_balance_card.dart';
 
+
 // Enum para controlar a view selecionada (Despesas ou Resumo)
 enum RachaView { despesas, resumo }
 

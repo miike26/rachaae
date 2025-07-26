@@ -55,7 +55,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   onPressed: () {
                     Navigator.of(context).pop(<String>[]);
                   },
-                  child: const Text('Limpar Filtro'),
+                  child: const Text('Limpar Filtr'),
                 ),
               ),
               const SizedBox(width: 8),
