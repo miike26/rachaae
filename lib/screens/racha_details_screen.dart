@@ -22,17 +22,41 @@ class RachaDetailsScreen extends StatefulWidget {
   State<RachaDetailsScreen> createState() => _RachaDetailsScreenState();
 }
 
-class _RachaDetailsScreenState extends State<RachaDetailsScreen> {
+class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTickerProviderStateMixin {
   late Racha _currentRacha;
   List<String> _filteredParticipants = [];
+  late TabController _tabController;
   RachaView _selectedView = RachaView.despesas;
 
   @override
   void initState() {
     super.initState();
     _currentRacha = widget.racha;
+    _tabController = TabController(length: 2, vsync: this, initialIndex: _selectedView.index);
+
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) return;
+      setState(() {
+        _selectedView = RachaView.values[_tabController.index];
+      });
+    });
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _onSegmentChanged(Set<RachaView> newSelection) {
+    final view = newSelection.first;
+    setState(() {
+      _selectedView = view;
+      _tabController.animateTo(view.index);
+    });
+  }
+
+  // --- Seus métodos existentes (show sheets, cálculos, etc) continuam iguais ---
   void _showFilterSheet() async {
     final selected = await showModalBottomSheet<List<String>>(
       context: context,
@@ -230,7 +254,6 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> {
                     onPressed: () => Navigator.of(context).pop(_currentRacha),
                   ),
                   Expanded(
-                    
                     child: Text(
                       _currentRacha.title,
                       textAlign: TextAlign.center,
@@ -244,10 +267,9 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> {
                   ),
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, size: 30, color:  Color(0xFF484848)),
-                    // *** ALTERAÇÕES NO MENU ***
-                    offset: const Offset(0, 55), // Desloca o menu para baixo
-                    color: Colors.white, // Define a cor de fundo
-                    shape: RoundedRectangleBorder( // Adiciona cantos arredondados
+                    offset: const Offset(0, 55),
+                    color: Colors.white,
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16.0),
                     ),
                     onSelected: (value) {
@@ -289,18 +311,14 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> {
                     ButtonSegment<RachaView>(value: RachaView.resumo, label: Text('Resumo')),
                   ],
                   selected: {_selectedView},
-                  onSelectionChanged: (Set<RachaView> newSelection) {
-                    setState(() {
-                      _selectedView = newSelection.first;
-                    });
-                  },
+                  onSelectionChanged: _onSegmentChanged,
                 ),
               ),
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: IndexedStack(
-                index: _selectedView.index,
+              child: TabBarView(
+                controller: _tabController,
                 children: [
                   _buildExpensesList(),
                   _buildSummaryTab(),
