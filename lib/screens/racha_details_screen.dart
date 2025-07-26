@@ -223,23 +223,57 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 15.0),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                    icon: const Icon(Icons.arrow_back, size: 30, color:  Color(0xFF484848)),
                     onPressed: () => Navigator.of(context).pop(_currentRacha),
                   ),
                   Expanded(
+                    
                     child: Text(
                       _currentRacha.title,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.lora(
+                      style: GoogleFonts.inriaSans(
                         fontWeight: FontWeight.bold,
-                        fontSize: 40,
+                        fontSize: 50,
                         height: 1.2,
+                        color: const Color(0xFF484848),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 48), 
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, size: 30, color:  Color(0xFF484848)),
+                    // *** ALTERAÇÕES NO MENU ***
+                    offset: const Offset(0, 55), // Desloca o menu para baixo
+                    color: Colors.white, // Define a cor de fundo
+                    shape: RoundedRectangleBorder( // Adiciona cantos arredondados
+                      borderRadius: BorderRadius.circular(16.0),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        Navigator.of(context).pop('delete');
+                      } else if (value == 'edit') {
+                        _navigateToEditRacha();
+                      } else if (value == 'finish') {
+                        setState(() {
+                          _currentRacha.isFinished = !_currentRacha.isFinished;
+                        });
+                      }
+                    },
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(
+                        value: 'finish',
+                        child: Text(_currentRacha.isFinished ? 'Reabrir Racha' : 'Finalizar Racha'),
+                      ),
+                      const PopupMenuItem<String>(value: 'edit', child: Text('Editar Racha')),
+                      const PopupMenuDivider(color: Color.fromARGB(255, 224, 224, 224)),
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('Excluir Racha', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -248,7 +282,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: SizedBox(
                 width: double.infinity,
-                height: 50, // **ALTURA AUMENTADA AQUI**
+                height: 50,
                 child: SegmentedButton<RachaView>(
                   segments: const <ButtonSegment<RachaView>>[
                     ButtonSegment<RachaView>(value: RachaView.despesas, label: Text('Despesas')),
@@ -281,49 +315,17 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            FloatingActionButton.extended(
+              onPressed: _showAddExpenseSheet,
+              label: const Text('Incluir Despesa'),
+              icon: const Icon(Icons.add),
+            ),
+            const SizedBox(width: 16),
             FloatingActionButton(
               onPressed: _showFilterSheet,
               heroTag: 'filter_fab',
               child: Icon(
                 _filteredParticipants.isEmpty ? Icons.filter_alt_outlined : Icons.filter_alt,
-              ),
-            ),
-            const SizedBox(width: 25),
-            SizedBox(
-              width: 180,
-              height: 56,
-              child: FloatingActionButton.extended(
-                onPressed: _showAddExpenseSheet,
-                label: const Text('Incluir Despesa'),
-                icon: const Icon(Icons.add),
-              ),
-            ),
-            const SizedBox(width: 25),
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'delete') {
-                  Navigator.of(context).pop('delete');
-                } else if (value == 'edit') {
-                  _navigateToEditRacha();
-                } else if (value == 'finish') {
-                  setState(() {
-                    _currentRacha.isFinished = !_currentRacha.isFinished;
-                  });
-                }
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
-                  value: 'finish',
-                  child: Text(_currentRacha.isFinished ? 'Reabrir Racha' : 'Finalizar Racha'),
-                ),
-                const PopupMenuItem<String>(value: 'edit', child: Text('Editar Racha')),
-                const PopupMenuDivider(),
-                const PopupMenuItem<String>(value: 'delete', child: Text('Excluir Racha', style: TextStyle(color: Colors.red))),
-              ],
-              child: const FloatingActionButton(
-                onPressed: null,
-                heroTag: 'menu_fab',
-                child: Icon(Icons.more_horiz),
               ),
             ),
           ],
