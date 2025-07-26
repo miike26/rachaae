@@ -245,7 +245,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 15.0),
+              padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 20.0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -299,7 +299,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 2),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: SizedBox(
@@ -315,7 +315,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
