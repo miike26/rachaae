@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Bora Rachar?',
+      title: 'Racha Ae',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: MaterialTheme.lightMediumContrastScheme(),

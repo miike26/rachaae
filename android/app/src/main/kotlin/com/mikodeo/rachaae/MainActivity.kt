@@ -1,4 +1,4 @@
-package com.example.bora_rachar
+package com.mikodeo.rachaae
 
 import io.flutter.embedding.android.FlutterActivity
 
