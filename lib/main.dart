@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart'; // Importa o pacote de fontes do Google
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart'; // Importa o Provider
+import 'package:firebase_core/firebase_core.dart'; // Importa o Firebase Core
+
+// Importações de telas e serviços
+import 'screens/profile_page.dart'; // Importa a nova página de perfil
+import 'firebase_options.dart'; // Importa a configuração do Firebase
+import 'services/auth_service.dart'; // Importa o serviço de autenticação
 import 'widgets/racha_card.dart';
 import 'screens/create_racha_screen.dart';
 import 'screens/racha_details_screen.dart';
 import 'models/racha_model.dart';
-import 'models/expense_model.dart';
+//import 'models/expense_model.dart';
 import 'services/storage_service.dart';
 import 'utils/color_helper.dart';
 import 'utils/material_theme.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  // Garante que o Flutter está pronto e inicializa o Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Envolve o aplicativo com o ChangeNotifierProvider
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => AuthService(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -22,11 +41,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Racha Ae',
+      // Seu tema original foi mantido
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: MaterialTheme.lightMediumContrastScheme(),
-        // scaffoldBackgroundColor: const Color(0xFFF9F9FF),
-        // **FONTE ALTERADA PARA ROBOTO**
         textTheme: GoogleFonts.robotoTextTheme(Theme.of(context).textTheme),
         cardTheme: CardThemeData(
           elevation: 1,
@@ -61,13 +79,10 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    // A lógica de carregar dados foi mantida, mas a criação de mocks foi removida
+    // para um comportamento mais real do app.
     var loadedRachas = await _storageService.loadRachas();
     final loadedUserName = await _storageService.loadUserName();
-    
-    if (loadedRachas.isEmpty) {
-      loadedRachas = _getMockRachas();
-      await _storageService.saveRachas(loadedRachas);
-    }
 
     setState(() {
       _rachas = loadedRachas;
@@ -80,40 +95,8 @@ class _MainScreenState extends State<MainScreen> {
     await _storageService.saveRachas(_rachas);
   }
 
-  Future<void> _saveUserName(String newName) async {
-    final oldName = _userName;
-    final updatedRachas = _rachas.map((racha) {
-      final updatedParticipants = racha.participants.map((p) => p == oldName ? newName : p).toList();
-      final updatedExpenses = racha.expenses.map((expense) {
-        final updatedSharedWith = expense.sharedWith.map((p) => p == oldName ? newName : p).toList();
-        final updatedPaidBy = expense.paidBy == oldName ? newName : expense.paidBy;
-        return Expense(
-          description: expense.description,
-          amount: expense.amount,
-          sharedWith: updatedSharedWith,
-          paidBy: updatedPaidBy,
-          countsForSettlement: expense.countsForSettlement,
-        );
-      }).toList();
-      return Racha(
-        title: racha.title,
-        date: racha.date,
-        participants: updatedParticipants,
-        expenses: updatedExpenses,
-        isFinished: racha.isFinished,
-        serviceFeeValue: racha.serviceFeeValue,
-        serviceFeeType: racha.serviceFeeType,
-        serviceFeeParticipants: racha.serviceFeeParticipants.map((p) => p == oldName ? newName : p).toList(),
-      );
-    }).toList();
-
-    setState(() {
-      _userName = newName;
-      _rachas = updatedRachas;
-    });
-    await _storageService.saveUserName(newName);
-    await _saveRachasToStorage();
-  }
+  // A função _saveUserName foi removida pois não era mais referenciada.
+  // A nova PerfilPage gerencia o estado do usuário (logado ou não).
 
   void _navigateAndCreateRacha() async {
     final newRacha = await Navigator.push<Racha>(
@@ -132,7 +115,7 @@ class _MainScreenState extends State<MainScreen> {
       }
     }
   }
-  
+
   void _navigateToRachaDetails(Racha racha, int index) async {
     final result = await Navigator.push(
       context,
@@ -157,10 +140,9 @@ class _MainScreenState extends State<MainScreen> {
         isLoading: _isLoading,
       ),
       AmigosPage(userName: _userName, rachas: _rachas),
-      PerfilPage(
-        userName: _userName,
-        onSaveName: _saveUserName,
-      ),
+      // AQUI ESTÁ A MUDANÇA PRINCIPAL:
+      // Usamos a nova PerfilPage importada, que já tem a lógica de login.
+      const PerfilPage(),
     ];
   }
 
@@ -195,42 +177,9 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
-
-  List<Racha> _getMockRachas() {
-    return [
-      Racha(
-        title: 'Jantar de Aniversário',
-        date: 'Hoje',
-        participants: ['Você', 'Jeff', 'Nubya', 'Frans', 'Kayky'],
-        expenses: [
-          Expense(description: 'Rodízio de Pizza', amount: 350.0, sharedWith: ['Você', 'Jeff', 'Nubya', 'Frans', 'Kayky'], paidBy: 'Jeff'),
-          Expense(description: 'Bebidas', amount: 120.0, sharedWith: ['Você', 'Jeff', 'Nubya', 'Frans', 'Kayky']),
-          Expense(description: 'Sobremesa Especial', amount: 35.0, sharedWith: ['Nubya']),
-        ],
-      ),
-      Racha(
-        title: 'Happy Hour da Firma',
-        date: 'Ontem',
-        participants: ['Você', 'Michele', 'Amanda', 'Kah', 'Jeff'],
-        expenses: [
-          Expense(description: 'Porções', amount: 180.0, sharedWith: ['Você', 'Michele', 'Amanda', 'Kah', 'Jeff']),
-          Expense(description: 'Chopp', amount: 250.0, sharedWith: ['Você', 'Michele', 'Amanda', 'Kah', 'Jeff'], paidBy: 'Michele'),
-        ],
-      ),
-      Racha(
-        title: 'Cinema',
-        date: 'Mês Passado',
-        participants: ['Você', 'Jeff', 'Frans'],
-        isFinished: true,
-        expenses: [
-          Expense(description: 'Ingressos', amount: 90.0, sharedWith: ['Você', 'Jeff', 'Frans']),
-          Expense(description: 'Pipoca', amount: 45.0, sharedWith: ['Você', 'Jeff']),
-        ],
-      ),
-    ];
-  }
 }
 
+// O widget RachasPage foi mantido como estava no seu código original
 class RachasPage extends StatelessWidget {
   final List<Racha> rachas;
   final Function(Racha, int) onRachaTap;
@@ -251,7 +200,6 @@ class RachasPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 80,
-        // **FONTE DO TÍTULO ATUALIZADA**
         title: Text('Meus Rachas', style: GoogleFonts.roboto(fontSize: 32, fontWeight: FontWeight.w500)),
         actions: [
           IconButton(icon: const Icon(Icons.search), onPressed: () {}),
@@ -305,6 +253,7 @@ class RachasPage extends StatelessWidget {
   }
 }
 
+// O widget AmigosPage foi mantido como estava no seu código original
 class AmigosPage extends StatelessWidget {
   final String userName;
   final List<Racha> rachas;
@@ -351,100 +300,5 @@ class AmigosPage extends StatelessWidget {
   }
 }
 
-class PerfilPage extends StatefulWidget {
-  final String userName;
-  final Function(String) onSaveName;
-
-  const PerfilPage({
-    super.key,
-    required this.userName,
-    required this.onSaveName,
-  });
-
-  @override
-  State<PerfilPage> createState() => _PerfilPageState();
-}
-
-class _PerfilPageState extends State<PerfilPage> {
-  late TextEditingController _nameController;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.userName);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 80,
-        title: Text('Perfil', style: GoogleFonts.roboto(fontSize: 32, fontWeight: FontWeight.w500)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const SizedBox(height: 20),
-          Column(
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: ColorHelper.getColorForName(widget.userName),
-                child: Text(
-                  widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : '?',
-                  style: const TextStyle(color: Colors.white, fontSize: 40),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _nameController,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  isDense: true,
-                ),
-              ),
-              const Text('voce@email.com', style: TextStyle(color: Colors.grey)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              widget.onSaveName(_nameController.text);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Nome salvo com sucesso!')),
-              );
-            },
-            child: const Text('Salvar Nome'),
-          ),
-          const SizedBox(height: 30),
-          const Text('CONFIGURAÇÕES', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.dark_mode_outlined),
-                  title: const Text('Modo Escuro'),
-                  trailing: Switch(value: false, onChanged: (val) {}),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.pix),
-                  title: const Text('Minha Chave PIX'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {},
-                ),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text('Sair', style: TextStyle(color: Colors.red)),
-                  onTap: () {},
-                ),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-  }
-}
+// A classe PerfilPage antiga foi removida daqui.
+// Agora o app usará a nova versão que está em 'lib/screens/profile_page.dart'.
