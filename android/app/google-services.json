@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1008659811091",
+    "project_id": "racha-ae",
+    "storage_bucket": "racha-ae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1008659811091:android:4300ff5cdabd0cf0cda8e6",
+        "android_client_info": {
+          "package_name": "com.mikodeo.rachaae"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGtLQ85KPXIGGlw3CsbVGE83vAJj50ekc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
