@@ -18,6 +18,10 @@ import 'models/racha_model.dart';
 import 'repositories/racha_repository.dart';
 import 'repositories/local_storage_repository.dart';
 import 'repositories/firestore_repository.dart';
+import 'widgets/add_friend_dialog.dart'; 
+import 'services/user_service.dart'; 
+import 'models/user_model.dart'; 
+import 'models/friend_request_model.dart'; 
 // --- FIM DAS IMPORTAÇÕES ---
 
 import 'utils/color_helper.dart';
@@ -29,21 +33,13 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // --- MUDANÇA PRINCIPAL: MultiProvider ---
-  // Agora fornecemos múltiplos serviços para a árvore de widgets.
   runApp(
     MultiProvider(
       providers: [
-        // 1. Fornece o AuthService para que todos possam acessá-lo.
         ChangeNotifierProvider(create: (context) => AuthService()),
-
-        // 2. Fornece o RachaRepository de forma dinâmica.
-        // O ProxyProvider ouve o AuthService.
+        Provider(create: (context) => UserService()),
         ProxyProvider<AuthService, RachaRepository>(
           update: (context, authService, previousRepository) {
-            // Se o usuário estiver logado (authService.user != null),
-            // ele fornece o FirestoreRepository.
-            // Se não, fornece o LocalStorageRepository.
             return authService.user != null
                 ? FirestoreRepository()
                 : LocalStorageRepository();
@@ -95,9 +91,7 @@ class _MainScreenState extends State<MainScreen> {
   User? _currentUser;
   
   bool _isInit = true;
-
   bool _isLoading = true;
-  String _userName = 'Você';
 
   @override
   void didChangeDependencies() {
@@ -111,20 +105,13 @@ class _MainScreenState extends State<MainScreen> {
       _currentUser = authService.user;
       _rachaRepository = newRepository;
       
-      // --- LÓGICA DE MIGRAÇÃO ---
-      // Se o usuário acabou de fazer login (o anterior era nulo e o atual não é)
       if (previousUser == null && _currentUser != null) {
         _handleUserDataMigration().then((_) {
-          // Após a lógica de migração (ou se não houver nada para migrar),
-          // carregamos os dados da nova fonte (Firestore).
           _loadInitialData();
         });
       } else {
-        // Para todos os outros casos (primeira carga, logout, etc.),
-        // apenas carregamos os dados.
         _loadInitialData();
       }
-      // --- FIM DA LÓGICA DE MIGRAÇÃO ---
       
       if (_isInit) {
         _isInit = false;
@@ -132,7 +119,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  /// Lida com a verificação e migração de dados locais para o Firestore.
   Future<void> _handleUserDataMigration() async {
     final localRepo = LocalStorageRepository();
     final firestoreRepo = FirestoreRepository();
@@ -190,12 +176,10 @@ class _MainScreenState extends State<MainScreen> {
     if (mounted) setState(() { _isLoading = true; });
     
     var loadedRachas = await _rachaRepository.getRachas();
-    final loadedUserName = await _rachaRepository.loadUserName();
 
     if (mounted) {
       setState(() {
         _rachas = loadedRachas;
-        _userName = loadedUserName;
         _isLoading = false;
       });
     }
@@ -239,7 +223,7 @@ class _MainScreenState extends State<MainScreen> {
         onRachaTap: _navigateToRachaDetails,
         isLoading: _isLoading,
       ),
-      AmigosPage(userName: _userName, rachas: _rachas),
+      const AmigosPage(),
       const PerfilPage(),
     ];
   }
@@ -277,7 +261,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// O restante do arquivo (RachasPage, AmigosPage) permanece o mesmo.
 class RachasPage extends StatelessWidget {
   final List<Racha> rachas;
   final Function(Racha, int) onRachaTap;
@@ -361,48 +344,206 @@ class RachasPage extends StatelessWidget {
   }
 }
 
-class AmigosPage extends StatelessWidget {
-  final String userName;
-  final List<Racha> rachas;
-  const AmigosPage({super.key, required this.userName, required this.rachas});
+class AmigosPage extends StatefulWidget {
+  const AmigosPage({super.key});
+
+  @override
+  State<AmigosPage> createState() => _AmigosPageState();
+}
+
+class _AmigosPageState extends State<AmigosPage> {
+  late final UserService _userService;
+
+  @override
+  void initState() {
+    super.initState();
+    _userService = Provider.of<UserService>(context, listen: false);
+  }
+
+  // --- NOVO MÉTODO ---
+  /// Mostra um diálogo de confirmação antes de remover um amigo.
+  void _confirmRemoveFriend(UserModel friend) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remover Amigo'),
+        content: Text('Tem certeza que deseja remover ${friend.displayName} da sua lista de amigos?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              _userService.removeFriend(friend.uid);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Remover', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final allFriends = rachas
-        .expand((racha) => racha.participants)
-        .toSet()
-        .where((name) => name != userName)
-        .toList();
+    final authService = Provider.of<AuthService>(context);
+    if (authService.user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 80,
+          title: Text('Amigos', style: GoogleFonts.roboto(fontSize: 32, fontWeight: FontWeight.w500)),
+        ),
+        body: const Center(
+          child: Text('Faça login para ver e adicionar amigos.'),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 80,
         title: Text('Amigos', style: GoogleFonts.roboto(fontSize: 32, fontWeight: FontWeight.w500)),
         actions: [
-          IconButton(icon: const Icon(Icons.person_add_alt_1), onPressed: () {}),
+          StreamBuilder<List<UserModel>>(
+            stream: _userService.getFriends(),
+            builder: (context, friendsSnapshot) {
+              return StreamBuilder<Set<String>>(
+                stream: _userService.getSentRequestIds(),
+                builder: (context, requestsSnapshot) {
+                  if (!friendsSnapshot.hasData || !requestsSnapshot.hasData) {
+                    return const IconButton(
+                      icon: Icon(Icons.person_add_alt_1),
+                      onPressed: null,
+                    );
+                  }
+                  final friends = friendsSnapshot.data!;
+                  final sentRequests = requestsSnapshot.data!;
+                  final friendIds = friends.map((f) => f.uid).toSet();
+
+                  return IconButton(
+                    icon: const Icon(Icons.person_add_alt_1),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AddFriendDialog(
+                          friendIds: friendIds,
+                          sentRequestIds: sentRequests,
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
           const SizedBox(width: 8),
         ],
       ),
-      body: ListView.builder(
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: allFriends.length,
-        itemBuilder: (context, index) {
-          final friendName = allFriends[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: ColorHelper.getColorForName(friendName),
-                child: Text(
-                  friendName.isNotEmpty ? friendName[0].toUpperCase() : '?',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        children: [
+          _buildFriendRequestsSection(),
+          const SizedBox(height: 24),
+          _buildFriendsListSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFriendRequestsSection() {
+    return StreamBuilder<List<FriendRequestModel>>(
+      stream: _userService.getFriendRequests(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final requests = snapshot.data!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('PEDIDOS DE AMIZADE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 8),
+            ...requests.map((request) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: NetworkImage(request.senderPhotoUrl),
+                ),
+                title: Text(request.senderName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.check_circle, color: Colors.green),
+                      onPressed: () => _userService.acceptFriendRequest(request.senderId),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.cancel, color: Colors.red),
+                      onPressed: () => _userService.declineFriendRequest(request.senderId),
+                    ),
+                  ],
                 ),
               ),
-              title: Text(friendName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          );
-        },
-      ),
+            )),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFriendsListSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('MEUS AMIGOS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 8),
+        StreamBuilder<List<UserModel>>(
+          stream: _userService.getFriends(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24.0),
+                child: Center(child: Text('Você ainda não tem amigos.')),
+              );
+            }
+            final friends = snapshot.data!;
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: friends.length,
+              itemBuilder: (context, index) {
+                final friend = friends[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: ColorHelper.getColorForName(friend.displayName),
+                      backgroundImage: friend.photoURL.isNotEmpty ? NetworkImage(friend.photoURL) : null,
+                      child: friend.photoURL.isEmpty 
+                        ? Text(friend.displayName.isNotEmpty ? friend.displayName[0] : 'U', style: const TextStyle(color: Colors.white))
+                        : null,
+                    ),
+                    title: Text(friend.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(friend.username ?? friend.email),
+                    // --- MUDANÇA AQUI ---
+                    trailing: IconButton(
+                      icon: const Icon(Icons.person_remove_outlined, color: Colors.redAccent),
+                      onPressed: () => _confirmRemoveFriend(friend),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
     );
   }
 }
