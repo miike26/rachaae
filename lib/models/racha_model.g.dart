@@ -11,7 +11,7 @@ Racha _$RachaFromJson(Map<String, dynamic> json) => Racha(
   title: json['title'] as String,
   date: json['date'] as String,
   participants: (json['participants'] as List<dynamic>)
-      .map((e) => e as String)
+      .map((e) => ParticipantModel.fromJson(e as Map<String, dynamic>))
       .toList(),
   expenses: (json['expenses'] as List<dynamic>?)
       ?.map((e) => Expense.fromJson(e as Map<String, dynamic>))
@@ -30,7 +30,7 @@ Map<String, dynamic> _$RachaToJson(Racha instance) => <String, dynamic>{
   'id': instance.id,
   'title': instance.title,
   'date': instance.date,
-  'participants': instance.participants,
+  'participants': instance.participants.map((e) => e.toJson()).toList(),
   'expenses': instance.expenses.map((e) => e.toJson()).toList(),
   'serviceFeeValue': instance.serviceFeeValue,
   'serviceFeeType': _$FeeTypeEnumMap[instance.serviceFeeType]!,

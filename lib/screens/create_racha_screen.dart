@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/racha_model.dart';
+import '../models/participant_model.dart'; // Importa o novo modelo
 import '../repositories/racha_repository.dart';
 import '../repositories/local_storage_repository.dart';
 import '../services/auth_service.dart';
@@ -19,13 +20,10 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
   final _titleController = TextEditingController();
   final _participantController = TextEditingController();
 
-  // --- MUDANÇA AQUI ---
-  // Usamos um mapa para armazenar os participantes. A chave é o nome,
-  // e o valor é o UserModel (se for um amigo) ou null (se for manual).
-  Map<String, UserModel?> _participants = {};
+  // A lista agora armazena o modelo completo do participante.
+  List<ParticipantModel> _participants = [];
   String _selectedDateOption = 'Hoje';
 
-  // Novos estados para a busca inteligente
   late final UserService _userService;
   late final RachaRepository _rachaRepository;
   List<UserModel> _friends = [];
@@ -53,11 +51,23 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    final userName = await _rachaRepository.loadUserName();
-    setState(() {
-      // Adiciona o usuário atual como participante (sem UserModel, pois pode estar offline)
-      _participants[userName] = null;
-    });
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final currentUser = authService.user;
+
+    // Adiciona o usuário atual (logado ou local) como o primeiro participante.
+    if (currentUser != null) {
+      // Se logado, cria um ParticipantModel com os dados do Firebase Auth.
+      _participants.add(ParticipantModel(
+        uid: currentUser.uid,
+        displayName: currentUser.displayName ?? 'Você',
+        photoURL: currentUser.photoURL,
+      ));
+    } else {
+      // Se não logado, carrega o nome local.
+      final localUserName = await _rachaRepository.loadUserName();
+      _participants.add(ParticipantModel(displayName: localUserName));
+    }
+    setState(() {});
 
     if (_isUserLoggedIn) {
       setState(() { _isLoadingFriends = true; });
@@ -86,20 +96,23 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
     });
   }
 
-  // --- MÉTODOS DE ADIÇÃO ATUALIZADOS ---
   void _addManualParticipant(String name) {
-    if (name.isNotEmpty && !_participants.containsKey(name)) {
+    if (name.isNotEmpty && !_participants.any((p) => p.displayName == name)) {
       setState(() {
-        _participants[name] = null; // null indica que é manual
+        _participants.add(ParticipantModel(displayName: name));
         _participantController.clear();
       });
     }
   }
 
   void _addFriendParticipant(UserModel friend) {
-    if (!_participants.containsKey(friend.displayName)) {
+    if (!_participants.any((p) => p.displayName == friend.displayName)) {
       setState(() {
-        _participants[friend.displayName] = friend;
+        _participants.add(ParticipantModel(
+          uid: friend.uid,
+          displayName: friend.displayName,
+          photoURL: friend.photoURL,
+        ));
         _participantController.clear();
       });
     }
@@ -111,8 +124,8 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
     final newRacha = Racha(
       title: _titleController.text,
       date: _selectedDateOption,
-      // Usamos apenas as chaves (nomes) do mapa
-      participants: _participants.keys.toList(),
+      // Passa a lista de ParticipantModel diretamente.
+      participants: _participants,
     );
 
     Navigator.of(context).pop(newRacha);
@@ -163,17 +176,14 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
               child: Wrap(
                 spacing: 8.0,
                 runSpacing: 8.0,
-                // --- MUDANÇA AQUI: Lógica para criar o Chip com Avatar ---
-                children: _participants.entries.map((entry) {
-                  final name = entry.key;
-                  final user = entry.value; // UserModel ou null
-                  
+                children: _participants.map((participant) {
+                  final name = participant.displayName;
+                  final photoURL = participant.photoURL;
+
                   CircleAvatar avatar;
-                  if (user != null && user.photoURL.isNotEmpty) {
-                    // Amigo com foto
-                    avatar = CircleAvatar(backgroundImage: NetworkImage(user.photoURL));
+                  if (photoURL != null && photoURL.isNotEmpty) {
+                    avatar = CircleAvatar(backgroundImage: NetworkImage(photoURL));
                   } else {
-                    // Amigo sem foto, participante manual ou o próprio usuário
                     avatar = CircleAvatar(
                       backgroundColor: ColorHelper.getColorForName(name),
                       child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(color: Colors.white)),
@@ -183,7 +193,9 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
                   return Chip(
                     avatar: avatar,
                     label: Text(name),
-                    onDeleted: name == _participants.keys.first ? null : () => setState(() => _participants.remove(name)),
+                    onDeleted: participant.displayName == _participants.first.displayName
+                        ? null
+                        : () => setState(() => _participants.remove(participant)),
                   );
                 }).toList(),
               ),
@@ -236,7 +248,6 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
       return ListTile(
         leading: const Icon(Icons.add_circle_outline),
         title: Text("Adicionar '${_participantController.text}' como participante"),
-        // --- MUDANÇA AQUI ---
         onTap: () => _addManualParticipant(_participantController.text),
       );
     }
@@ -245,8 +256,7 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
   }
 
   Widget _buildFriendsList(List<UserModel> friends) {
-    // Filtra para não mostrar amigos que já foram adicionados
-    final availableFriends = friends.where((f) => !_participants.containsKey(f.displayName)).toList();
+    final availableFriends = friends.where((f) => !_participants.any((p) => p.displayName == f.displayName)).toList();
 
     if (availableFriends.isEmpty) {
       if (_participantController.text.isNotEmpty) {
@@ -275,7 +285,6 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
             subtitle: Text(friend.username ?? friend.email),
             trailing: IconButton(
               icon: const Icon(Icons.add),
-              // --- MUDANÇA AQUI ---
               onPressed: () => _addFriendParticipant(friend),
             ),
           );

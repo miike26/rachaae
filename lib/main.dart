@@ -223,6 +223,8 @@ class _MainScreenState extends State<MainScreen> {
         onRachaTap: _navigateToRachaDetails,
         isLoading: _isLoading,
       ),
+      // --- MUDANÇA AQUI ---
+      // A AmigosPage agora é independente
       const AmigosPage(),
       const PerfilPage(),
     ];
@@ -344,6 +346,7 @@ class RachasPage extends StatelessWidget {
   }
 }
 
+// --- AmigosPage agora é StatefulWidget ---
 class AmigosPage extends StatefulWidget {
   const AmigosPage({super.key});
 
@@ -358,31 +361,6 @@ class _AmigosPageState extends State<AmigosPage> {
   void initState() {
     super.initState();
     _userService = Provider.of<UserService>(context, listen: false);
-  }
-
-  // --- NOVO MÉTODO ---
-  /// Mostra um diálogo de confirmação antes de remover um amigo.
-  void _confirmRemoveFriend(UserModel friend) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remover Amigo'),
-        content: Text('Tem certeza que deseja remover ${friend.displayName} da sua lista de amigos?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              _userService.removeFriend(friend.uid);
-              Navigator.of(context).pop();
-            },
-            child: const Text('Remover', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -532,7 +510,6 @@ class _AmigosPageState extends State<AmigosPage> {
                     ),
                     title: Text(friend.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(friend.username ?? friend.email),
-                    // --- MUDANÇA AQUI ---
                     trailing: IconButton(
                       icon: const Icon(Icons.person_remove_outlined, color: Colors.redAccent),
                       onPressed: () => _confirmRemoveFriend(friend),
@@ -544,6 +521,29 @@ class _AmigosPageState extends State<AmigosPage> {
           },
         ),
       ],
+    );
+  }
+
+  void _confirmRemoveFriend(UserModel friend) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remover Amigo'),
+        content: Text('Tem certeza que deseja remover ${friend.displayName} da sua lista de amigos?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              _userService.removeFriend(friend.uid);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Remover', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/expense_model.dart';
-import '../utils/color_helper.dart'; // Importa o gerador de cores
+import '../models/participant_model.dart'; // Importa o modelo
+import '../utils/color_helper.dart';
 
-// Um card inteligente que mostra o balanço de um participante e pode ser expandido.
 class ParticipantBalanceCard extends StatefulWidget {
-  final String participantName;
+  // --- MUDANÇA AQUI ---
+  final ParticipantModel participant;
   final List<Expense> allExpenses;
   final double totalConsumed;
   final double cashierTotal;
@@ -14,7 +15,7 @@ class ParticipantBalanceCard extends StatefulWidget {
 
   const ParticipantBalanceCard({
     super.key,
-    required this.participantName,
+    required this.participant,
     required this.allExpenses,
     required this.totalConsumed,
     required this.cashierTotal,
@@ -32,14 +33,16 @@ class _ParticipantBalanceCardState extends State<ParticipantBalanceCard> {
 
   @override
   Widget build(BuildContext context) {
+    final participantName = widget.participant.displayName;
+    final photoURL = widget.participant.photoURL;
+
     final participantExpenses = widget.allExpenses
-        .where((e) => e.sharedWith.contains(widget.participantName))
+        .where((e) => e.sharedWith.contains(participantName))
         .toList();
     
     final bool showSimplifiedView = (widget.totalConsumed - widget.cashierTotal).abs() < 0.01 && widget.balance.abs() < 0.01;
 
-    // **USA O GERADOR DE CORES AQUI**
-    final avatarColor = ColorHelper.getColorForName(widget.participantName);
+    final avatarColor = ColorHelper.getColorForName(participantName);
 
     return Card(
       elevation: 2,
@@ -71,7 +74,7 @@ class _ParticipantBalanceCardState extends State<ParticipantBalanceCard> {
                         children: [
                           Row(
                             children: [
-                              Text(widget.participantName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              Text(participantName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                               const SizedBox(width: 8),
                               if (widget.isPayingFee && widget.serviceFeePerPerson > 0)
                                 Icon(Icons.room_service, size: 16, color: Colors.orange.shade300),
@@ -106,10 +109,13 @@ class _ParticipantBalanceCardState extends State<ParticipantBalanceCard> {
                       children: [
                         CircleAvatar(
                           backgroundColor: avatarColor,
-                          child: Text(
-                            widget.participantName.isNotEmpty ? widget.participantName[0] : '?',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
+                          backgroundImage: (photoURL != null && photoURL.isNotEmpty) ? NetworkImage(photoURL) : null,
+                          child: (photoURL == null || photoURL.isEmpty)
+                            ? Text(
+                                participantName.isNotEmpty ? participantName[0] : '?',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              )
+                            : null,
                         ),
                         const SizedBox(width: 8),
                         Icon(_isExpanded ? Icons.expand_less : Icons.expand_more, color: Colors.grey),
@@ -117,7 +123,6 @@ class _ParticipantBalanceCardState extends State<ParticipantBalanceCard> {
                     ),
                   ],
                 ),
-
                 if (_isExpanded) ...[
                   const Divider(height: 24),
                   ...participantExpenses.map((expense) {

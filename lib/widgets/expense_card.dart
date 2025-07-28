@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/participant_model.dart'; // Importa o modelo de participante
 import '../utils/color_helper.dart';
 
 class ExpenseCard extends StatefulWidget {
@@ -7,11 +8,11 @@ class ExpenseCard extends StatefulWidget {
   final String sharedBy;
   final String? paidBy;
   final bool countsForSettlement;
-  final List<String> participantsInitials;
-  final List<String> sharedWithFullNames;
+  // --- MUDANÇA AQUI ---
+  // Recebe a lista completa de modelos de participante
+  final List<ParticipantModel> sharedWithParticipants;
   final double numericAmount;
   final VoidCallback onEditPressed;
-  // NOVO PARÂMETRO: A lista completa de participantes do racha.
   final List<String> allRachaParticipants;
 
   const ExpenseCard({
@@ -21,8 +22,7 @@ class ExpenseCard extends StatefulWidget {
     required this.sharedBy,
     this.paidBy,
     required this.countsForSettlement,
-    required this.participantsInitials,
-    required this.sharedWithFullNames,
+    required this.sharedWithParticipants,
     required this.numericAmount,
     required this.onEditPressed,
     required this.allRachaParticipants,
@@ -37,6 +37,7 @@ class _ExpenseCardState extends State<ExpenseCard> {
 
   @override
   Widget build(BuildContext context) {
+    // A lógica do build principal permanece a mesma
     return InkWell(
       onTap: () {
         setState(() {
@@ -63,6 +64,7 @@ class _ExpenseCardState extends State<ExpenseCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ... (código do cabeçalho do card, sem alterações)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,10 +165,11 @@ class _ExpenseCardState extends State<ExpenseCard> {
                         key: const ValueKey('expanded_content'),
                         children: [
                           const Divider(height: 24),
-                          ...widget.sharedWithFullNames.map((name) {
-                            final amountPerPerson = widget.numericAmount / widget.sharedWithFullNames.length;
+                          // --- MUDANÇA AQUI ---
+                          ...widget.sharedWithParticipants.map((participant) {
+                            final amountPerPerson = widget.numericAmount / widget.sharedWithParticipants.length;
                             return ListTile(
-                              title: Text(name, style: const TextStyle(fontSize: 15)),
+                              title: Text(participant.displayName, style: const TextStyle(fontSize: 15)),
                               trailing: Text(
                                 'R\$ ${amountPerPerson.toStringAsFixed(2)}',
                                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
@@ -187,9 +190,9 @@ class _ExpenseCardState extends State<ExpenseCard> {
 
   Widget _buildParticipantAvatars() {
     const maxAvatars = 5;
-    final itemsToShow = widget.participantsInitials.length > maxAvatars
+    final itemsToShow = widget.sharedWithParticipants.length > maxAvatars
         ? maxAvatars
-        : widget.participantsInitials.length;
+        : widget.sharedWithParticipants.length;
 
     final containerWidth = itemsToShow > 0 ? 28.0 + (18.0 * (itemsToShow - 1)) : 0.0;
 
@@ -200,11 +203,12 @@ class _ExpenseCardState extends State<ExpenseCard> {
         children: List.generate(
           itemsToShow,
           (index) {
-            final initial = widget.participantsInitials[index];
-            final name = widget.sharedWithFullNames[index];
+            // --- MUDANÇA AQUI ---
+            final participant = widget.sharedWithParticipants[index];
+            final name = participant.displayName;
+            final photoURL = participant.photoURL;
             final reversedIndex = itemsToShow - 1 - index;
             
-            // **LÓGICA DE COR CONSISTENTE**
             final color = ColorHelper.getColorForName(name);
 
             return Positioned(
@@ -212,14 +216,17 @@ class _ExpenseCardState extends State<ExpenseCard> {
               child: CircleAvatar(
                 radius: 14,
                 backgroundColor: color,
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
+                backgroundImage: (photoURL != null && photoURL.isNotEmpty) ? NetworkImage(photoURL) : null,
+                child: (photoURL == null || photoURL.isEmpty)
+                  ? Text(
+                      name.isNotEmpty ? name[0] : '?',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    )
+                  : null,
               ),
             );
           },

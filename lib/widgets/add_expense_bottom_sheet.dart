@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/expense_model.dart';
-import 'participant_selector.dart'; // Importa o novo seletor
+import '../models/participant_model.dart'; // Importa o modelo
+import 'participant_selector.dart';
 
 class AddExpenseBottomSheet extends StatefulWidget {
-  final List<String> participants;
+  // --- MUDANÇA AQUI ---
+  final List<ParticipantModel> participants;
   const AddExpenseBottomSheet({super.key, required this.participants});
 
   @override
@@ -15,11 +17,14 @@ class _AddExpenseBottomSheetState extends State<AddExpenseBottomSheet> {
   final _amountController = TextEditingController();
   List<String> _selectedParticipants = [];
 
+  // Helper para obter apenas os nomes
+  List<String> get _participantNames => widget.participants.map((p) => p.displayName).toList();
+
   @override
   void initState() {
     super.initState();
     // Por padrão, todos vêm selecionados ao criar.
-    _selectedParticipants = List.from(widget.participants);
+    _selectedParticipants = _participantNames;
   }
 
   void _saveExpense() {
@@ -64,9 +69,9 @@ class _AddExpenseBottomSheetState extends State<AddExpenseBottomSheet> {
             const Text('Dividir com:', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             
-            // **USA O NOVO SELETOR AQUI**
+            // --- MUDANÇA AQUI ---
             ParticipantSelector(
-              allParticipants: widget.participants,
+              allParticipants: widget.participants, // Passa a lista de modelos
               initialSelection: _selectedParticipants,
               onSelectionChanged: (newSelection) {
                 _selectedParticipants = newSelection;

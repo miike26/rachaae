@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../models/expense_model.dart';
-import 'participant_selector.dart'; // Importa o novo seletor
+import '../models/participant_model.dart'; // Importa o modelo
+import 'participant_selector.dart';
 
 class EditExpenseBottomSheet extends StatefulWidget {
   final Expense expense;
-  final List<String> participants;
+  // --- MUDANÇA AQUI ---
+  final List<ParticipantModel> participants;
 
   const EditExpenseBottomSheet({
     super.key,
@@ -22,6 +24,9 @@ class _EditExpenseBottomSheetState extends State<EditExpenseBottomSheet> {
   late List<String> _selectedParticipants;
   String? _selectedPayer;
   late bool _countsForSettlement;
+
+  // Helper para obter apenas os nomes
+  List<String> get _participantNames => widget.participants.map((p) => p.displayName).toList();
 
   @override
   void initState() {
@@ -42,6 +47,7 @@ class _EditExpenseBottomSheetState extends State<EditExpenseBottomSheet> {
     }
 
     final updatedExpense = Expense(
+      id: widget.expense.id,
       description: description,
       amount: amount,
       sharedWith: _selectedParticipants,
@@ -81,7 +87,7 @@ class _EditExpenseBottomSheetState extends State<EditExpenseBottomSheet> {
                   value: null,
                   child: Text('Todos (dividir igualmente)'),
                 ),
-                ...widget.participants.map((name) {
+                ..._participantNames.map((name) { // Usa a lista de nomes
                   return DropdownMenuItem(value: name, child: Text(name));
                 })
               ],
@@ -120,9 +126,9 @@ class _EditExpenseBottomSheetState extends State<EditExpenseBottomSheet> {
             const Text('Dividir com:', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             
-            // **USA O NOVO SELETOR AQUI**
+            // --- MUDANÇA AQUI ---
             ParticipantSelector(
-              allParticipants: widget.participants,
+              allParticipants: widget.participants, // Passa a lista de modelos
               initialSelection: _selectedParticipants,
               onSelectionChanged: (newSelection) {
                 _selectedParticipants = newSelection;

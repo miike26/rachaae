@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/expense_model.dart';
-import '../utils/color_helper.dart'; // Importa o gerador de cores
+import '../models/participant_model.dart'; // Importa o modelo
+import '../utils/color_helper.dart';
 
 class IndividualExpenseCard extends StatefulWidget {
-  final String participantName;
+  // --- MUDANÇA AQUI ---
+  final ParticipantModel participant;
   final List<Expense> expenses;
   final Function(Expense) onTap;
 
   const IndividualExpenseCard({
     super.key,
-    required this.participantName,
+    required this.participant,
     required this.expenses,
     required this.onTap,
   });
@@ -25,8 +27,10 @@ class _IndividualExpenseCardState extends State<IndividualExpenseCard> {
   Widget build(BuildContext context) {
     final totalAmount = widget.expenses.fold(0.0, (sum, item) => sum + item.amount);
     
-    // **USA O GERADOR DE CORES AQUI**
-    final avatarColor = ColorHelper.getColorForName(widget.participantName);
+    // --- MUDANÇA AQUI ---
+    final name = widget.participant.displayName;
+    final photoURL = widget.participant.photoURL;
+    final avatarColor = ColorHelper.getColorForName(name);
 
     return InkWell(
       onTap: () {
@@ -50,7 +54,7 @@ class _IndividualExpenseCardState extends State<IndividualExpenseCard> {
         ),
         child: AnimatedSize(
           duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOutBack, 
+          curve: Curves.easeOutBack,  
           child: Column(
             children: [
               Row(
@@ -60,17 +64,21 @@ class _IndividualExpenseCardState extends State<IndividualExpenseCard> {
                     children: [
                       CircleAvatar(
                         backgroundColor: avatarColor,
-                        child: Text(
-                          widget.participantName.isNotEmpty ? widget.participantName[0] : '?',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                        // --- MUDANÇA AQUI ---
+                        backgroundImage: (photoURL != null && photoURL.isNotEmpty) ? NetworkImage(photoURL) : null,
+                        child: (photoURL == null || photoURL.isEmpty)
+                            ? Text(
+                                name.isNotEmpty ? name[0] : '?',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : null,
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        widget.participantName,
+                        name,
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                       ),
                     ],

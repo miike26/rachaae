@@ -14,7 +14,6 @@ class RachaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos o Card diretamente, pois o tema já define o estilo.
     return Card(
       elevation: 4,
       shadowColor: Colors.black.withOpacity(0.1),
@@ -61,10 +60,12 @@ class RachaCard extends StatelessWidget {
   }
 
   Widget _buildParticipantAvatars() {
-    final initials = racha.participants.map((name) => name.isNotEmpty ? name[0].toUpperCase() : '?').toList();
-
     const maxAvatars = 5;
-    final itemsToShow = initials.length > maxAvatars ? maxAvatars : initials.length;
+    final itemsToShow = racha.participants.length > maxAvatars ? maxAvatars : racha.participants.length;
+
+    if (itemsToShow == 0) {
+      return const SizedBox(height: 32);
+    }
 
     return SizedBox(
       height: 32,
@@ -72,25 +73,31 @@ class RachaCard extends StatelessWidget {
         children: List.generate(
           itemsToShow,
           (index) {
-            final name = racha.participants[index];
-            final initial = initials[index];
-            
-            if (index == maxAvatars - 1 && initials.length > maxAvatars) {
+            // --- MUDANÇA AQUI ---
+            final participant = racha.participants[index];
+            final name = participant.displayName;
+            final photoURL = participant.photoURL;
+
+            if (index == maxAvatars - 1 && racha.participants.length > maxAvatars) {
               return Positioned(
                 left: (index * 24).toDouble(),
                 child: CircleAvatar(
                   radius: 16,
                   backgroundColor: Colors.grey[300],
-                  child: Text('+${initials.length - (maxAvatars - 1)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black)),
+                  child: Text('+${racha.participants.length - (maxAvatars - 1)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black)),
                 ),
               );
             }
+            
             return Positioned(
               left: (index * 24).toDouble(),
               child: CircleAvatar(
                 radius: 16,
                 backgroundColor: ColorHelper.getColorForName(name),
-                child: Text(initial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                backgroundImage: (photoURL != null && photoURL.isNotEmpty) ? NetworkImage(photoURL) : null,
+                child: (photoURL == null || photoURL.isEmpty)
+                  ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))
+                  : null,
               ),
             );
           },

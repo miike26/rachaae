@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/racha_model.dart';
 import '../models/expense_model.dart';
+import '../models/participant_model.dart'; // Importa o novo modelo
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../models/user_model.dart';
@@ -20,8 +21,8 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
   late TextEditingController _participantController;
   late String _selectedDateOption;
 
-  // Usamos um mapa para armazenar os participantes.
-  Map<String, UserModel?> _participants = {};
+  // A lista agora armazena o modelo completo do participante.
+  List<ParticipantModel> _participants = [];
 
   // Estados para a busca inteligente
   late final UserService _userService;
@@ -37,9 +38,8 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
     _participantController = TextEditingController();
     _selectedDateOption = widget.racha.date;
 
-    // Inicializa os participantes existentes como manuais.
-    // Uma melhoria futura seria buscar os UserModels correspondentes se estiver online.
-    _participants = {for (var p in widget.racha.participants) p: null};
+    // Popula a lista com os participantes existentes.
+    _participants = List.from(widget.racha.participants);
 
     final authService = Provider.of<AuthService>(context, listen: false);
     _userService = Provider.of<UserService>(context, listen: false);
@@ -85,18 +85,22 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
   }
 
   void _addManualParticipant(String name) {
-    if (name.isNotEmpty && !_participants.containsKey(name)) {
+    if (name.isNotEmpty && !_participants.any((p) => p.displayName == name)) {
       setState(() {
-        _participants[name] = null;
+        _participants.add(ParticipantModel(displayName: name));
         _participantController.clear();
       });
     }
   }
 
   void _addFriendParticipant(UserModel friend) {
-    if (!_participants.containsKey(friend.displayName)) {
+    if (!_participants.any((p) => p.displayName == friend.displayName)) {
       setState(() {
-        _participants[friend.displayName] = friend;
+        _participants.add(ParticipantModel(
+          uid: friend.uid,
+          displayName: friend.displayName,
+          photoURL: friend.photoURL,
+        ));
         _participantController.clear();
       });
     }
@@ -105,12 +109,12 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
   void _saveChanges() {
     if (_titleController.text.isEmpty) return;
 
-    final updatedParticipantsList = _participants.keys.toList();
+    final updatedParticipantNames = _participants.map((p) => p.displayName).toList();
 
     // Limpa as despesas de participantes que foram removidos
     final updatedExpenses = <Expense>[];
     for (var oldExpense in widget.racha.expenses) {
-      final newSharedWith = oldExpense.sharedWith.where((p) => updatedParticipantsList.contains(p)).toList();
+      final newSharedWith = oldExpense.sharedWith.where((p) => updatedParticipantNames.contains(p)).toList();
       
       if (newSharedWith.isNotEmpty) {
         updatedExpenses.add(Expense(
@@ -118,7 +122,7 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
           description: oldExpense.description,
           amount: oldExpense.amount,
           sharedWith: newSharedWith,
-          paidBy: updatedParticipantsList.contains(oldExpense.paidBy) ? oldExpense.paidBy : null,
+          paidBy: updatedParticipantNames.contains(oldExpense.paidBy) ? oldExpense.paidBy : null,
           countsForSettlement: oldExpense.countsForSettlement,
         ));
       }
@@ -128,12 +132,12 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
       id: widget.racha.id,
       title: _titleController.text,
       date: _selectedDateOption,
-      participants: updatedParticipantsList,
+      participants: _participants,
       expenses: updatedExpenses,
       isFinished: widget.racha.isFinished,
       serviceFeeValue: widget.racha.serviceFeeValue,
       serviceFeeType: widget.racha.serviceFeeType,
-      serviceFeeParticipants: widget.racha.serviceFeeParticipants.where((p) => updatedParticipantsList.contains(p)).toList(),
+      serviceFeeParticipants: widget.racha.serviceFeeParticipants.where((p) => updatedParticipantNames.contains(p)).toList(),
     );
 
     Navigator.of(context).pop(updatedRacha);
@@ -180,13 +184,13 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
               child: Wrap(
                 spacing: 8.0,
                 runSpacing: 8.0,
-                children: _participants.entries.map((entry) {
-                  final name = entry.key;
-                  final user = entry.value;
+                children: _participants.map((participant) {
+                  final name = participant.displayName;
+                  final photoURL = participant.photoURL;
                   
                   CircleAvatar avatar;
-                  if (user != null && user.photoURL.isNotEmpty) {
-                    avatar = CircleAvatar(backgroundImage: NetworkImage(user.photoURL));
+                  if (photoURL != null && photoURL.isNotEmpty) {
+                    avatar = CircleAvatar(backgroundImage: NetworkImage(photoURL));
                   } else {
                     avatar = CircleAvatar(
                       backgroundColor: ColorHelper.getColorForName(name),
@@ -197,7 +201,7 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
                   return Chip(
                     avatar: avatar,
                     label: Text(name),
-                    onDeleted: () => setState(() => _participants.remove(name)),
+                    onDeleted: () => setState(() => _participants.remove(participant)),
                   );
                 }).toList(),
               ),
@@ -254,7 +258,7 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
   }
 
   Widget _buildFriendsList(List<UserModel> friends) {
-    final availableFriends = friends.where((f) => !_participants.containsKey(f.displayName)).toList();
+    final availableFriends = friends.where((f) => !_participants.any((p) => p.displayName == f.displayName)).toList();
 
     if (availableFriends.isEmpty) {
       if (_participantController.text.isNotEmpty) {

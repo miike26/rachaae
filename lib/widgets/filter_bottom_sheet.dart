@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'participant_selector.dart'; // Importa o seletor de avatares
+import '../models/participant_model.dart'; // Importa o modelo
+import 'participant_selector.dart';
 
 class FilterBottomSheet extends StatefulWidget {
-  final List<String> allParticipants;
+  // --- MUDANÇA AQUI ---
+  final List<ParticipantModel> allParticipants;
   final List<String> initiallySelected;
 
   const FilterBottomSheet({
@@ -38,9 +40,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           ),
           const SizedBox(height: 16),
           
-          // **USA O NOVO SELETOR AQUI**
+          // --- MUDANÇA AQUI ---
           ParticipantSelector(
-            allParticipants: widget.allParticipants,
+            allParticipants: widget.allParticipants, // Passa a lista de modelos
             initialSelection: _selectedParticipants,
             onSelectionChanged: (newSelection) {
               _selectedParticipants = newSelection;
@@ -55,7 +57,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   onPressed: () {
                     Navigator.of(context).pop(<String>[]);
                   },
-                  child: const Text('Limpar Filtr'),
+                  child: const Text('Limpar Filtro'),
                 ),
               ),
               const SizedBox(width: 8),

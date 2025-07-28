@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/racha_model.dart';
+import '../models/participant_model.dart'; // Importa o modelo
 import 'participant_selector.dart';
 
 class EditFeesBottomSheet extends StatefulWidget {
   final double initialFeeValue;
   final FeeType initialFeeType;
   final List<String> initialParticipants;
-  final List<String> allParticipants;
+  // --- MUDANÇA AQUI ---
+  final List<ParticipantModel> allParticipants;
 
   const EditFeesBottomSheet({
     super.key,
@@ -89,8 +91,9 @@ class _EditFeesBottomSheetState extends State<EditFeesBottomSheet> {
             const SizedBox(height: 16),
             const Text('Dividir taxa com:', style: TextStyle(fontWeight: FontWeight.w600)),
             
+            // --- MUDANÇA AQUI ---
             ParticipantSelector(
-              allParticipants: widget.allParticipants,
+              allParticipants: widget.allParticipants, // Passa a lista de modelos
               initialSelection: _selectedParticipants,
               onSelectionChanged: (newSelection) {
                 _selectedParticipants = newSelection;

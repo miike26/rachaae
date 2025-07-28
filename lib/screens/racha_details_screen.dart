@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/racha_model.dart';
 import '../models/expense_model.dart';
+import '../models/participant_model.dart';
 import '../widgets/expense_card.dart';
 import '../widgets/edit_fees_bottom_sheet.dart';
 import '../widgets/add_expense_bottom_sheet.dart';
@@ -11,8 +12,6 @@ import 'edit_racha_screen.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/participant_balance_card.dart';
 
-
-// Enum para controlar a view selecionada (Despesas ou Resumo)
 enum RachaView { despesas, resumo }
 
 class RachaDetailsScreen extends StatefulWidget {
@@ -28,6 +27,9 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
   List<String> _filteredParticipants = [];
   late TabController _tabController;
   RachaView _selectedView = RachaView.despesas;
+
+  List<String> get _participantNames => _currentRacha.participants.map((p) => p.displayName).toList();
+  Map<String, ParticipantModel> get _participantMap => { for (var p in _currentRacha.participants) p.displayName: p };
 
   @override
   void initState() {
@@ -57,13 +59,13 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
     });
   }
 
-  // --- Seus métodos existentes (show sheets, cálculos, etc) continuam iguais ---
   void _showFilterSheet() async {
     final selected = await showModalBottomSheet<List<String>>(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       isScrollControlled: true,
       builder: (context) => FilterBottomSheet(
+        // --- MUDANÇA AQUI ---
         allParticipants: _currentRacha.participants,
         initiallySelected: _filteredParticipants,
       ),
@@ -85,6 +87,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
         initialFeeValue: _currentRacha.serviceFeeValue,
         initialFeeType: _currentRacha.serviceFeeType,
         initialParticipants: _currentRacha.serviceFeeParticipants,
+        // --- MUDANÇA AQUI ---
         allParticipants: _currentRacha.participants,
       ),
     );
@@ -103,6 +106,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       isScrollControlled: true,
+      // --- MUDANÇA AQUI ---
       builder: (context) => AddExpenseBottomSheet(participants: _currentRacha.participants),
     );
 
@@ -120,6 +124,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
       isScrollControlled: true,
       builder: (context) => EditExpenseBottomSheet(
         expense: expenseToEdit,
+        // --- MUDANÇA AQUI ---
         participants: _currentRacha.participants,
       ),
     );
@@ -169,7 +174,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
   }
 
   Map<String, double> _calculateTotalPerParticipant() {
-    Map<String, double> totals = { for (var p in _currentRacha.participants) p : 0.0 };
+    Map<String, double> totals = { for (var p in _participantNames) p : 0.0 };
     
     for (var expense in _currentRacha.expenses) {
       if (expense.sharedWith.isNotEmpty) {
@@ -192,7 +197,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
   }
   
   Map<String, double> _calculateCashierTotalPerParticipant() {
-    Map<String, double> cashierTotals = { for (var p in _currentRacha.participants) p : 0.0 };
+    Map<String, double> cashierTotals = { for (var p in _participantNames) p : 0.0 };
     final serviceFeeAmount = _getServiceFeeAmount();
 
     for (var expense in _currentRacha.expenses) {
@@ -223,7 +228,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
   }
 
   Map<String, double> _calculateSettlement() {
-    Map<String, double> balances = { for (var p in _currentRacha.participants) p : 0.0 };
+    Map<String, double> balances = { for (var p in _participantNames) p : 0.0 };
 
     for (var expense in _currentRacha.expenses.where((e) => e.paidBy != null && e.countsForSettlement)) {
       balances[expense.paidBy!] = (balances[expense.paidBy!] ?? 0) + expense.amount;
@@ -392,6 +397,11 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
           const SizedBox(height: 8),
           ...sharedExpenses.map((expense) {
             final index = _currentRacha.expenses.indexOf(expense);
+            final participantsForExpense = expense.sharedWith
+                .map((name) => _participantMap[name])
+                .whereType<ParticipantModel>()
+                .toList();
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: ExpenseCard(
@@ -400,11 +410,10 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
                 sharedBy: 'Dividido por ${expense.sharedWith.length}',
                 paidBy: expense.paidBy,
                 countsForSettlement: expense.countsForSettlement,
-                participantsInitials: expense.sharedWith.map((p) => p.isNotEmpty ? p[0] : '?').toList(),
-                sharedWithFullNames: expense.sharedWith,
+                sharedWithParticipants: participantsForExpense,
                 numericAmount: expense.amount,
                 onEditPressed: () => _showEditExpenseSheet(expense, index),
-                allRachaParticipants: _currentRacha.participants,
+                allRachaParticipants: _participantNames,
               ),
             );
           }),
@@ -418,10 +427,13 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
           ...groupedIndividualExpenses.entries.map((entry) {
             final participantName = entry.key;
             final expenses = entry.value;
+            final participant = _participantMap[participantName];
+            if (participant == null) return const SizedBox.shrink();
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: IndividualExpenseCard(
-                participantName: participantName,
+                participant: participant,
                 expenses: expenses,
                 onTap: (expense) {
                   final index = _currentRacha.expenses.indexOf(expense);
@@ -460,7 +472,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
                   const SizedBox(height: 12),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Subtotal'), Text('R\$ ${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w500))]),
                   const SizedBox(height: 8),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Taxa de Serviço (${_currentRacha.serviceFeeValue}${_currentRacha.serviceFeeType == FeeType.percentage ? '%' : ' R\$'})'), Text('R\$ ${serviceFee.toStringAsFixed(2)}')]),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Taxa de Serviço (${_currentRacha.serviceFeeValue}${_currentRacha.serviceFeeType == FeeType.percentage ? '%' : ' R\$'})'), Text('R\$ ${serviceFee.toStringAsFixed(2)}',)]),
                   const Divider(height: 24),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), Text('R\$ ${totalAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))]),
                   const SizedBox(height: 8),
@@ -474,8 +486,8 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
             elevation: 0,
             color: Colors.transparent,
             child: Padding(
-               padding: const EdgeInsets.symmetric(vertical: 8.0),
-               child: Column(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Padding(
@@ -483,7 +495,8 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
                     child: Text('Balanço por Participante', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 8),
-                  ..._currentRacha.participants.map((participantName) {
+                  ..._currentRacha.participants.map((participant) {
+                    final participantName = participant.displayName;
                     final serviceFeePerPerson = _currentRacha.serviceFeeParticipants.contains(participantName) && _currentRacha.serviceFeeParticipants.isNotEmpty
                         ? serviceFee / _currentRacha.serviceFeeParticipants.length
                         : 0.0;
@@ -492,7 +505,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
                     final isPayingFee = _currentRacha.serviceFeeParticipants.contains(participantName);
 
                     return ParticipantBalanceCard(
-                      participantName: participantName,
+                      participant: participant,
                       allExpenses: _currentRacha.expenses,
                       totalConsumed: totalPerParticipant[participantName] ?? 0.0,
                       cashierTotal: cashierTotalPerParticipant[participantName] ?? 0.0,
@@ -502,8 +515,8 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
                     );
                   }).toList(),
                 ],
-               ),
-             ),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           if (debtors.isNotEmpty && creditors.isNotEmpty)
