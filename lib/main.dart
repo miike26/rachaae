@@ -1,37 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart'; // Importa o Provider
-import 'package:firebase_core/firebase_core.dart'; // Importa o Firebase Core
+import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Importa o User do Firebase Auth
 
 // Importações de telas e serviços
-import 'screens/profile_page.dart'; // Importa a nova página de perfil
-import 'firebase_options.dart'; // Importa a configuração do Firebase
-import 'services/auth_service.dart'; // Importa o serviço de autenticação
+import 'screens/profile_page.dart';
+import 'firebase_options.dart';
+import 'services/auth_service.dart';
 import 'widgets/racha_card.dart';
 import 'screens/create_racha_screen.dart';
 import 'screens/racha_details_screen.dart';
 import 'models/racha_model.dart';
-//import 'models/expense_model.dart';
-import 'services/storage_service.dart';
+
+// --- NOSSAS NOVAS IMPORTAÇÕES ---
+import 'repositories/racha_repository.dart';
+import 'repositories/local_storage_repository.dart';
+import 'repositories/firestore_repository.dart';
+// --- FIM DAS IMPORTAÇÕES ---
+
 import 'utils/color_helper.dart';
 import 'utils/material_theme.dart';
 
 void main() async {
-  // Garante que o Flutter está pronto e inicializa o Firebase
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Envolve o aplicativo com o ChangeNotifierProvider
+  // --- MUDANÇA PRINCIPAL: MultiProvider ---
+  // Agora fornecemos múltiplos serviços para a árvore de widgets.
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => AuthService(),
+    MultiProvider(
+      providers: [
+        // 1. Fornece o AuthService para que todos possam acessá-lo.
+        ChangeNotifierProvider(create: (context) => AuthService()),
+
+        // 2. Fornece o RachaRepository de forma dinâmica.
+        // O ProxyProvider ouve o AuthService.
+        ProxyProvider<AuthService, RachaRepository>(
+          update: (context, authService, previousRepository) {
+            // Se o usuário estiver logado (authService.user != null),
+            // ele fornece o FirestoreRepository.
+            // Se não, fornece o LocalStorageRepository.
+            return authService.user != null
+                ? FirestoreRepository()
+                : LocalStorageRepository();
+          },
+        ),
+      ],
       child: const MyApp(),
     ),
   );
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -41,7 +64,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Racha Ae',
-      // Seu tema original foi mantido
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: MaterialTheme.lightMediumContrastScheme(),
@@ -68,35 +90,116 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   List<Racha> _rachas = [];
-  final StorageService _storageService = StorageService();
+  
+  late RachaRepository _rachaRepository;
+  User? _currentUser;
+  
+  bool _isInit = true;
+
   bool _isLoading = true;
   String _userName = 'Você';
 
   @override
-  void initState() {
-    super.initState();
-    _loadInitialData();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    final authService = Provider.of<AuthService>(context);
+    final newRepository = Provider.of<RachaRepository>(context);
+
+    if (_isInit || _currentUser != authService.user) {
+      final previousUser = _currentUser;
+      _currentUser = authService.user;
+      _rachaRepository = newRepository;
+      
+      // --- LÓGICA DE MIGRAÇÃO ---
+      // Se o usuário acabou de fazer login (o anterior era nulo e o atual não é)
+      if (previousUser == null && _currentUser != null) {
+        _handleUserDataMigration().then((_) {
+          // Após a lógica de migração (ou se não houver nada para migrar),
+          // carregamos os dados da nova fonte (Firestore).
+          _loadInitialData();
+        });
+      } else {
+        // Para todos os outros casos (primeira carga, logout, etc.),
+        // apenas carregamos os dados.
+        _loadInitialData();
+      }
+      // --- FIM DA LÓGICA DE MIGRAÇÃO ---
+      
+      if (_isInit) {
+        _isInit = false;
+      }
+    }
+  }
+
+  /// Lida com a verificação e migração de dados locais para o Firestore.
+  Future<void> _handleUserDataMigration() async {
+    final localRepo = LocalStorageRepository();
+    final firestoreRepo = FirestoreRepository();
+
+    final localRachas = await localRepo.getRachas();
+
+    if (localRachas.isNotEmpty && mounted) {
+      final shouldMigrate = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Sincronizar dados?'),
+            content: const Text('Encontramos rachas salvos no seu aparelho. Deseja movê-los para sua conta na nuvem?'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Não, obrigado'),
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+              ElevatedButton(
+                child: const Text('Sim, mover'),
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (shouldMigrate == true && mounted) {
+        setState(() { _isLoading = true; });
+
+        try {
+          for (final racha in localRachas) {
+            await firestoreRepo.saveRacha(racha);
+          }
+          await localRepo.clearAllRachas();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Dados sincronizados com sucesso!')),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Erro ao sincronizar dados: $e')),
+            );
+          }
+        }
+      }
+    }
   }
 
   Future<void> _loadInitialData() async {
-    // A lógica de carregar dados foi mantida, mas a criação de mocks foi removida
-    // para um comportamento mais real do app.
-    var loadedRachas = await _storageService.loadRachas();
-    final loadedUserName = await _storageService.loadUserName();
+    if (mounted) setState(() { _isLoading = true; });
+    
+    var loadedRachas = await _rachaRepository.getRachas();
+    final loadedUserName = await _rachaRepository.loadUserName();
 
-    setState(() {
-      _rachas = loadedRachas;
-      _userName = loadedUserName;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _rachas = loadedRachas;
+        _userName = loadedUserName;
+        _isLoading = false;
+      });
+    }
   }
-
-  Future<void> _saveRachasToStorage() async {
-    await _storageService.saveRachas(_rachas);
-  }
-
-  // A função _saveUserName foi removida pois não era mais referenciada.
-  // A nova PerfilPage gerencia o estado do usuário (logado ou não).
 
   void _navigateAndCreateRacha() async {
     final newRacha = await Navigator.push<Racha>(
@@ -105,14 +208,8 @@ class _MainScreenState extends State<MainScreen> {
     );
 
     if (newRacha != null) {
-      setState(() {
-        _rachas.insert(0, newRacha);
-      });
-      await _saveRachasToStorage();
-
-      if (mounted) {
-        _navigateToRachaDetails(newRacha, 0);
-      }
+      await _rachaRepository.saveRacha(newRacha);
+      _loadInitialData();
     }
   }
 
@@ -122,14 +219,17 @@ class _MainScreenState extends State<MainScreen> {
       MaterialPageRoute(builder: (context) => RachaDetailsScreen(racha: racha)),
     );
 
-    setState(() {
-      if (result == 'delete') {
+    if (result == 'delete') {
+      await _rachaRepository.deleteRacha(racha.id);
+      setState(() {
         _rachas.removeAt(index);
-      } else if (result is Racha) {
+      });
+    } else if (result is Racha) {
+      await _rachaRepository.updateRacha(result);
+      setState(() {
         _rachas[index] = result;
-      }
-    });
-    _saveRachasToStorage();
+      });
+    }
   }
 
   List<Widget> _getPages() {
@@ -140,8 +240,6 @@ class _MainScreenState extends State<MainScreen> {
         isLoading: _isLoading,
       ),
       AmigosPage(userName: _userName, rachas: _rachas),
-      // AQUI ESTÁ A MUDANÇA PRINCIPAL:
-      // Usamos a nova PerfilPage importada, que já tem a lógica de login.
       const PerfilPage(),
     ];
   }
@@ -179,7 +277,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-// O widget RachasPage foi mantido como estava no seu código original
+// O restante do arquivo (RachasPage, AmigosPage) permanece o mesmo.
 class RachasPage extends StatelessWidget {
   final List<Racha> rachas;
   final Function(Racha, int) onRachaTap;
@@ -211,6 +309,16 @@ class RachasPage extends StatelessWidget {
           : ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
+                if (rachas.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 50.0),
+                      child: Text(
+                        'Crie seu primeiro racha!',
+                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                      ),
+                    ),
+                  ),
                 if (openRachas.isNotEmpty) ...[
                   const Padding(
                     padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
@@ -253,7 +361,6 @@ class RachasPage extends StatelessWidget {
   }
 }
 
-// O widget AmigosPage foi mantido como estava no seu código original
 class AmigosPage extends StatelessWidget {
   final String userName;
   final List<Racha> rachas;
@@ -299,6 +406,3 @@ class AmigosPage extends StatelessWidget {
     );
   }
 }
-
-// A classe PerfilPage antiga foi removida daqui.
-// Agora o app usará a nova versão que está em 'lib/screens/profile_page.dart'.

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/racha_model.dart';
-import '../services/storage_service.dart'; // Importa o storage
+// --- MUDANÇA AQUI ---
+import '../repositories/local_storage_repository.dart';
+// --- FIM DA MUDANÇA ---
 
 class CreateRachaScreen extends StatefulWidget {
   const CreateRachaScreen({super.key});
@@ -15,7 +17,10 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
 
   List<String> _participants = [];
   String _selectedDateOption = 'Hoje';
-  final _storageService = StorageService();
+  
+  // --- MUDANÇA AQUI ---
+  final _rachaRepository = LocalStorageRepository();
+  // --- FIM DA MUDANÇA ---
 
   @override
   void initState() {
@@ -25,7 +30,9 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
 
   // Carrega o nome do usuário para usar como o primeiro participante.
   Future<void> _loadUserName() async {
-    final userName = await _storageService.loadUserName();
+    // --- MUDANÇA AQUI ---
+    final userName = await _rachaRepository.loadUserName();
+    // --- FIM DA MUDANÇA ---
     setState(() {
       _participants = [userName];
     });

@@ -12,7 +12,20 @@
           "package_name": "com.mikodeo.rachaae"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1008659811091-u3g3v39vrvmsjuhstnm1q7u98qdvqs28.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mikodeo.rachaae",
+            "certificate_hash": "b5fc3ca222ead224983a92167044ecc9745e2b20"
+          }
+        },
+        {
+          "client_id": "1008659811091-728dt26s7dvvs6fc10l3u53kh4aqo209.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCGtLQ85KPXIGGlw3CsbVGE83vAJj50ekc"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1008659811091-728dt26s7dvvs6fc10l3u53kh4aqo209.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1008659811091-c068jdq87k564qu9krkqhnuf3t2rppa7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mikodeo.rachaae"
+              }
+            }
+          ]
         }
       }
     }

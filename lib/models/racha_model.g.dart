@@ -7,6 +7,7 @@ part of 'racha_model.dart';
 // **************************************************************************
 
 Racha _$RachaFromJson(Map<String, dynamic> json) => Racha(
+  id: json['id'] as String?,
   title: json['title'] as String,
   date: json['date'] as String,
   participants: (json['participants'] as List<dynamic>)
@@ -26,6 +27,7 @@ Racha _$RachaFromJson(Map<String, dynamic> json) => Racha(
 );
 
 Map<String, dynamic> _$RachaToJson(Racha instance) => <String, dynamic>{
+  'id': instance.id,
   'title': instance.title,
   'date': instance.date,
   'participants': instance.participants,
