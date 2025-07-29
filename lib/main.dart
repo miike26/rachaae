@@ -3,7 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Importa o User do Firebase Auth
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Importações de telas e serviços
 import 'screens/profile_page.dart';
@@ -14,7 +14,7 @@ import 'screens/create_racha_screen.dart';
 import 'screens/racha_details_screen.dart';
 import 'models/racha_model.dart';
 
-// --- NOSSAS NOVAS IMPORTAÇÕES ---
+// Repositórios e outros serviços
 import 'repositories/racha_repository.dart';
 import 'repositories/local_storage_repository.dart';
 import 'repositories/firestore_repository.dart';
@@ -22,7 +22,6 @@ import 'widgets/add_friend_dialog.dart';
 import 'services/user_service.dart'; 
 import 'models/user_model.dart'; 
 import 'models/friend_request_model.dart'; 
-// --- FIM DAS IMPORTAÇÕES ---
 
 import 'utils/color_helper.dart';
 import 'utils/material_theme.dart';
@@ -200,7 +199,12 @@ class _MainScreenState extends State<MainScreen> {
   void _navigateToRachaDetails(Racha racha, int index) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => RachaDetailsScreen(racha: racha)),
+      MaterialPageRoute(
+        builder: (context) => RachaDetailsScreen(
+          racha: racha,
+          repository: _rachaRepository,
+        ),
+      ),
     );
 
     if (result == 'delete') {
@@ -209,7 +213,6 @@ class _MainScreenState extends State<MainScreen> {
         _rachas.removeAt(index);
       });
     } else if (result is Racha) {
-      await _rachaRepository.updateRacha(result);
       setState(() {
         _rachas[index] = result;
       });
@@ -223,8 +226,6 @@ class _MainScreenState extends State<MainScreen> {
         onRachaTap: _navigateToRachaDetails,
         isLoading: _isLoading,
       ),
-      // --- MUDANÇA AQUI ---
-      // A AmigosPage agora é independente
       const AmigosPage(),
       const PerfilPage(),
     ];
@@ -346,7 +347,6 @@ class RachasPage extends StatelessWidget {
   }
 }
 
-// --- AmigosPage agora é StatefulWidget ---
 class AmigosPage extends StatefulWidget {
   const AmigosPage({super.key});
 
@@ -361,6 +361,29 @@ class _AmigosPageState extends State<AmigosPage> {
   void initState() {
     super.initState();
     _userService = Provider.of<UserService>(context, listen: false);
+  }
+
+  void _confirmRemoveFriend(UserModel friend) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remover Amigo'),
+        content: Text('Tem certeza que deseja remover ${friend.displayName} da sua lista de amigos?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              _userService.removeFriend(friend.uid);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Remover', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -521,29 +544,6 @@ class _AmigosPageState extends State<AmigosPage> {
           },
         ),
       ],
-    );
-  }
-
-  void _confirmRemoveFriend(UserModel friend) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remover Amigo'),
-        content: Text('Tem certeza que deseja remover ${friend.displayName} da sua lista de amigos?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () {
-              _userService.removeFriend(friend.uid);
-              Navigator.of(context).pop();
-            },
-            child: const Text('Remover', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -1,11 +1,12 @@
-// lib/screens/profile_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 import '../utils/color_helper.dart';
+import '../models/user_model.dart';
 
 class PerfilPage extends StatefulWidget {
   const PerfilPage({super.key});
@@ -15,39 +16,114 @@ class PerfilPage extends StatefulWidget {
 }
 
 class _PerfilPageState extends State<PerfilPage> {
-  // O controller para o nome local, usado quando o usuário não está logado.
   final TextEditingController _nameController = TextEditingController(text: 'Você');
+  final TextEditingController _usernameController = TextEditingController();
+  final UserService _userService = UserService();
+
+  bool _isLoading = false;
+  String? _usernameError;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveUsername() async {
+    setState(() {
+      _isLoading = true;
+      _usernameError = null;
+    });
+
+    final username = _usernameController.text.trim();
+    if (username.isEmpty) {
+      setState(() {
+        _usernameError = 'O username não pode ser vazio.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (!RegExp(r'^[a-z0-9_]+$').hasMatch(username)) {
+      setState(() {
+        _usernameError = 'Use apenas letras minúsculas, números e _';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final isAvailable = await _userService.isUsernameAvailable(username);
+
+    if (!isAvailable) {
+      setState(() {
+        _usernameError = 'Este @username já está em uso.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // --- NOVO: Diálogo de confirmação ---
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Username'),
+        content: Text(
+            "Você está prestes a definir seu username como \"@$username\".\n\nEsta ação não poderá ser desfeita. Deseja continuar?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      setState(() {
+        _isLoading = false;
+      });
+      return; // Usuário cancelou
+    }
+    // --- FIM DO DIÁLOGO ---
+
+    try {
+      await _userService.setUsername(username);
+      final authService = Provider.of<AuthService>(context, listen: false);
+      await authService.reloadUserProfile();
+
+    } catch (e) {
+      print("Erro ao salvar username: $e");
+    } finally {
+      if (mounted) {
+        setState(() { _isLoading = false; });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Usamos o Consumer para ouvir as mudanças no AuthService
     return Consumer<AuthService>(
       builder: (context, authService, child) {
         final user = authService.user;
+        final userProfile = authService.userProfile;
         final bool isUserLoggedIn = user != null;
 
         return Scaffold(
           appBar: AppBar(
             toolbarHeight: 80,
-            title: Text(
-              'Perfil',
-              style: GoogleFonts.roboto(fontSize: 32, fontWeight: FontWeight.w500),
-            ),
+            title: Text('Perfil', style: GoogleFonts.roboto(fontSize: 32, fontWeight: FontWeight.w500)),
           ),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               const SizedBox(height: 20),
-              // --- SEÇÃO DE INFORMAÇÕES DO USUÁRIO ---
               Column(
                 children: [
-                  // O avatar muda se o usuário estiver logado
                   if (isUserLoggedIn && user.photoURL != null)
                     CircleAvatar(
                       radius: 50,
@@ -63,72 +139,29 @@ class _PerfilPageState extends State<PerfilPage> {
                       ),
                     ),
                   const SizedBox(height: 12),
-                  // O campo de nome é editável apenas se não estiver logado
-                  TextField(
-                    controller: isUserLoggedIn ? TextEditingController(text: user.displayName) : _nameController,
-                    readOnly: isUserLoggedIn, // Bloqueia a edição se estiver logado
+                  Text(
+                    isUserLoggedIn ? user.displayName ?? 'Usuário' : _nameController.text,
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
                   ),
-                  // Mostra o email se estiver logado, ou um texto padrão
                   Text(
-                    isUserLoggedIn ? user.email! : 'voce_local@email.com',
+                    isUserLoggedIn ? user.email! : 'Faça login para sincronizar',
                     style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              // O botão de salvar só aparece se não estiver logado
-              if (!isUserLoggedIn)
-                ElevatedButton(
-                  onPressed: () {
-                    // Aqui você pode reconectar a lógica para salvar o nome localmente
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Nome local salvo!')),
-                    );
-                  },
-                  child: const Text('Salvar Nome'),
-                ),
               const SizedBox(height: 30),
 
-              // --- SEÇÃO DE CONTA (LOGIN/LOGOUT) ---
+              if (isUserLoggedIn)
+                _buildUsernameSection(userProfile),
+
+              const SizedBox(height: 20),
               const Text('CONTA', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Card(
                 child: isUserLoggedIn
                     ? _buildLogoutTile(context, authService)
                     : _buildLoginTile(context, authService),
-              ),
-
-              const SizedBox(height: 30),
-
-              // --- SEÇÃO DE CONFIGURAÇÕES ---
-              const Text('CONFIGURAÇÕES', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Card(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.dark_mode_outlined),
-                      title: const Text('Modo Escuro'),
-                      trailing: Switch(value: false, onChanged: (val) {
-                        // Lógica para o modo escuro
-                      }),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.pix),
-                      title: const Text('Minha Chave PIX'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        // Lógica para a chave PIX
-                      },
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
@@ -137,7 +170,58 @@ class _PerfilPageState extends State<PerfilPage> {
     );
   }
 
-  // Widget para o botão de Login
+  Widget _buildUsernameSection(UserModel? userProfile) {
+    if (userProfile == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (userProfile.username != null) {
+      return Card(
+        child: ListTile(
+          leading: const Icon(Icons.alternate_email),
+          title: const Text('Seu @username'),
+          subtitle: Text(userProfile.username!, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      );
+    }
+
+    return Card(
+      elevation: 2,
+      shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Crie seu @username', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            const Text('Facilite que seus amigos te encontrem!', style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _usernameController,
+              decoration: InputDecoration(
+                prefixText: '@',
+                hintText: 'seu_usuario',
+                border: const OutlineInputBorder(),
+                errorText: _usernameError,
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _saveUsername,
+                child: _isLoading
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Salvar e verificar'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLoginTile(BuildContext context, AuthService authService) {
     return ListTile(
       leading: const FaIcon(FontAwesomeIcons.google, color: Colors.blueAccent),
@@ -150,7 +234,6 @@ class _PerfilPageState extends State<PerfilPage> {
     );
   }
 
-  // Widget para o botão de Logout
   Widget _buildLogoutTile(BuildContext context, AuthService authService) {
     return ListTile(
       leading: const Icon(Icons.logout, color: Colors.red),

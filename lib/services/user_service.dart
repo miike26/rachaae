@@ -12,6 +12,40 @@ class UserService {
     if (user == null) throw Exception('Utilizador não autenticado.');
     return user.uid;
   }
+  
+  // --- NOVO MÉTODO ---
+  /// Busca os dados completos de um usuário no Firestore.
+  Future<UserModel?> getUserProfile([String? uid]) async {
+    final userId = uid ?? _currentUserUid;
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        return UserModel.fromFirestore(doc);
+      }
+    } catch (e) {
+      print("Erro ao buscar perfil do usuário: $e");
+    }
+    return null;
+  }
+
+  // --- NOVO MÉTODO ---
+  /// Verifica se um username já está em uso.
+  Future<bool> isUsernameAvailable(String username) async {
+    final query = await _firestore
+        .collection('users')
+        .where('username', isEqualTo: username.toLowerCase())
+        .limit(1)
+        .get();
+    return query.docs.isEmpty;
+  }
+
+  // --- NOVO MÉTODO ---
+  /// Define o username para o usuário atual.
+  Future<void> setUsername(String username) async {
+    await _firestore.collection('users').doc(_currentUserUid).update({
+      'username': username.toLowerCase(),
+    });
+  }
 
   Future<List<UserModel>> searchUsers(String query) async {
     if (query.isEmpty) return [];
@@ -92,12 +126,7 @@ class UserService {
     await batch.commit();
   }
 
-  /// Remove uma amizade.
   Future<void> removeFriend(String friendId) async {
-    // --- LÓGICA CORRIGIDA ---
-    // Agora, a remoção é unilateral. Apenas o amigo é removido
-    // da lista do usuário atual. A outra pessoa continuará vendo
-    // o usuário atual como amigo até que ela também o remova.
     final currentUserFriendDoc = _firestore
         .collection('users')
         .doc(_currentUserUid)

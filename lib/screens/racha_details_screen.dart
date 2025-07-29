@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/racha_model.dart';
 import '../models/expense_model.dart';
 import '../models/participant_model.dart';
+import '../repositories/racha_repository.dart';
 import '../widgets/expense_card.dart';
 import '../widgets/edit_fees_bottom_sheet.dart';
 import '../widgets/add_expense_bottom_sheet.dart';
@@ -16,7 +17,13 @@ enum RachaView { despesas, resumo }
 
 class RachaDetailsScreen extends StatefulWidget {
   final Racha racha;
-  const RachaDetailsScreen({super.key, required this.racha});
+  final RachaRepository repository;
+
+  const RachaDetailsScreen({
+    super.key, 
+    required this.racha,
+    required this.repository,
+  });
 
   @override
   State<RachaDetailsScreen> createState() => _RachaDetailsScreenState();
@@ -51,6 +58,19 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
     super.dispose();
   }
 
+  Future<void> _saveChanges() async {
+    try {
+      await widget.repository.updateRacha(_currentRacha);
+    } catch (e) {
+      print("Erro ao salvar alterações: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao sincronizar. Verifique sua conexão.')),
+        );
+      }
+    }
+  }
+
   void _onSegmentChanged(Set<RachaView> newSelection) {
     final view = newSelection.first;
     setState(() {
@@ -65,7 +85,6 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       isScrollControlled: true,
       builder: (context) => FilterBottomSheet(
-        // --- MUDANÇA AQUI ---
         allParticipants: _currentRacha.participants,
         initiallySelected: _filteredParticipants,
       ),
@@ -87,7 +106,6 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
         initialFeeValue: _currentRacha.serviceFeeValue,
         initialFeeType: _currentRacha.serviceFeeType,
         initialParticipants: _currentRacha.serviceFeeParticipants,
-        // --- MUDANÇA AQUI ---
         allParticipants: _currentRacha.participants,
       ),
     );
@@ -98,6 +116,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
         _currentRacha.serviceFeeType = result['type'];
         _currentRacha.serviceFeeParticipants = result['participants'];
       });
+      _saveChanges();
     }
   }
 
@@ -106,7 +125,6 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       isScrollControlled: true,
-      // --- MUDANÇA AQUI ---
       builder: (context) => AddExpenseBottomSheet(participants: _currentRacha.participants),
     );
 
@@ -114,6 +132,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
       setState(() {
         _currentRacha.expenses.add(newExpense);
       });
+      _saveChanges();
     }
   }
 
@@ -124,7 +143,6 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
       isScrollControlled: true,
       builder: (context) => EditExpenseBottomSheet(
         expense: expenseToEdit,
-        // --- MUDANÇA AQUI ---
         participants: _currentRacha.participants,
       ),
     );
@@ -137,6 +155,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
           _currentRacha.expenses.removeAt(index);
         }
       });
+      _saveChanges();
     }
   }
   
@@ -152,6 +171,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
       setState(() {
         _currentRacha = updatedRacha;
       });
+      _saveChanges();
     }
   }
 
@@ -287,6 +307,7 @@ class _RachaDetailsScreenState extends State<RachaDetailsScreen> with SingleTick
                         setState(() {
                           _currentRacha.isFinished = !_currentRacha.isFinished;
                         });
+                        _saveChanges();
                       }
                     },
                     itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
