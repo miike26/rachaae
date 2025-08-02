@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -9,7 +8,14 @@ import '../utils/color_helper.dart';
 import '../models/user_model.dart';
 
 class PerfilPage extends StatefulWidget {
-  const PerfilPage({super.key});
+  final double topPadding;
+  final double bottomPadding;
+
+  const PerfilPage({
+    super.key,
+    required this.topPadding,
+    required this.bottomPadding,
+  });
 
   @override
   State<PerfilPage> createState() => _PerfilPageState();
@@ -63,7 +69,6 @@ class _PerfilPageState extends State<PerfilPage> {
       return;
     }
 
-    // --- NOVO: Diálogo de confirmação ---
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -87,20 +92,20 @@ class _PerfilPageState extends State<PerfilPage> {
       setState(() {
         _isLoading = false;
       });
-      return; // Usuário cancelou
+      return;
     }
-    // --- FIM DO DIÁLOGO ---
 
     try {
       await _userService.setUsername(username);
       final authService = Provider.of<AuthService>(context, listen: false);
       await authService.reloadUserProfile();
-
     } catch (e) {
       print("Erro ao salvar username: $e");
     } finally {
       if (mounted) {
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -114,47 +119,50 @@ class _PerfilPageState extends State<PerfilPage> {
         final bool isUserLoggedIn = user != null;
 
         return Scaffold(
-          appBar: AppBar(
-            toolbarHeight: 80,
-            title: Text('Perfil', style: GoogleFonts.roboto(fontSize: 32, fontWeight: FontWeight.w500)),
-          ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16.0, widget.topPadding, 16.0, widget.bottomPadding),
             children: [
               const SizedBox(height: 20),
               Column(
                 children: [
                   if (isUserLoggedIn && user.photoURL != null)
                     CircleAvatar(
-                      radius: 50,
+                      radius: 60,
                       backgroundImage: NetworkImage(user.photoURL!),
                     )
                   else
                     CircleAvatar(
-                      radius: 50,
-                      backgroundColor: ColorHelper.getColorForName(isUserLoggedIn ? user.displayName ?? '' : _nameController.text),
+                      radius: 60,
+                      backgroundColor: ColorHelper.getColorForName(isUserLoggedIn
+                          ? user.displayName ?? ''
+                          : _nameController.text),
                       child: Text(
-                        (isUserLoggedIn ? user.displayName?.substring(0, 1) : _nameController.text.substring(0, 1)) ?? 'U',
-                        style: const TextStyle(color: Colors.white, fontSize: 40),
+                        (isUserLoggedIn
+                                ? user.displayName?.substring(0, 1)
+                                : _nameController.text.substring(0, 1)) ??
+                            'U',
+                        style: const TextStyle(color: Colors.white, fontSize: 50),
                       ),
                     ),
                   const SizedBox(height: 12),
                   Text(
-                    isUserLoggedIn ? user.displayName ?? 'Usuário' : _nameController.text,
+                    isUserLoggedIn
+                        ? user.displayName ?? 'Usuário'
+                        : _nameController.text,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    isUserLoggedIn ? user.email! : 'Faça login para sincronizar',
+                    isUserLoggedIn
+                        ? user.email!
+                        : 'Faça login para sincronizar',
                     style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
               const SizedBox(height: 30),
-
-              if (isUserLoggedIn)
-                _buildUsernameSection(userProfile),
-
+              if (isUserLoggedIn) _buildUsernameSection(userProfile),
               const SizedBox(height: 20),
               const Text('CONTA', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
@@ -180,7 +188,8 @@ class _PerfilPageState extends State<PerfilPage> {
         child: ListTile(
           leading: const Icon(Icons.alternate_email),
           title: const Text('Seu @username'),
-          subtitle: Text(userProfile.username!, style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(userProfile.username!,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
       );
     }
@@ -193,9 +202,11 @@ class _PerfilPageState extends State<PerfilPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Crie seu @username', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Crie seu @username',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            const Text('Facilite que seus amigos te encontrem!', style: TextStyle(color: Colors.grey)),
+            const Text('Facilite que seus amigos te encontrem!',
+                style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
             TextField(
               controller: _usernameController,
@@ -212,7 +223,10 @@ class _PerfilPageState extends State<PerfilPage> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _saveUsername,
                 child: _isLoading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('Salvar e verificar'),
               ),
             ),
@@ -224,7 +238,8 @@ class _PerfilPageState extends State<PerfilPage> {
 
   Widget _buildLoginTile(BuildContext context, AuthService authService) {
     return ListTile(
-      leading: const FaIcon(FontAwesomeIcons.google, color: Colors.blueAccent),
+      leading:
+          const FaIcon(FontAwesomeIcons.google, color: Colors.blueAccent),
       title: const Text('Entrar com Google'),
       subtitle: const Text('Sincronize seus dados na nuvem'),
       trailing: const Icon(Icons.login),

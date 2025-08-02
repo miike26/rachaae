@@ -37,6 +37,7 @@ dependencies:
   cloud_firestore: ^5.0.1 # Banco de dados Firestore
   provider: ^6.1.2  # Para gerenciamento de estado
   font_awesome_flutter: ^10.7.0 # Para o ícone do Google
+  flutter_svg: ^2.0.9
 
   
   google_fonts: ^6.2.1
@@ -78,6 +79,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # ASSETS DECLARADOS
+  assets:
+    - assets/images/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
