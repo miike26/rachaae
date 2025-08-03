@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const double headerHeight = 160.0;
+    const double headerHeight = 150.0;
     const double navBarBottomOffset = 20.0;
     const double extraTopPadding = 13.0;
 
@@ -220,7 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           _buildFloatingHeader(headerHeight),
           _buildCustomNavBar(navBarHeight, navBarBottomOffset, scaleFactor),
-          // AJUSTE: O Positioned agora fica fora do AnimatedSwitcher
           Positioned(
             bottom: navBarBottomOffset + 110.0,
             right: 17.0,
@@ -255,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: EdgeInsets.only(
           left: 24,
           right: 16,
-          top: MediaQuery.of(context).padding.top + 10,
+          top: MediaQuery.of(context).padding.top, // Usa a área segura
         ),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -269,27 +268,27 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 12.0), // <-- Ajuste este valor
-              child: Text(
-                titles[_selectedIndex],
-                style: Theme.of(context).textTheme.displayLarge,
+        // SOLUÇÃO: Adiciona um Padding geral e alinha a Row na parte inferior
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 22.0), // Padding inferior
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end, // Alinha na base
+            children: [
+              Expanded(
+                child: Text(
+                  titles[_selectedIndex],
+                  style: Theme.of(context).textTheme.displayLarge,
+                ),
               ),
-            ),
-            if (_selectedIndex == 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 20.0),
-                child: IconButton(
+              if (_selectedIndex == 0)
+                IconButton(
                   icon: const Icon(Icons.search, size: 30),
                   onPressed: () {},
                 ),
-              ),
-            if (_selectedIndex == 1) _buildAddFriendButton(),
-          ],
+              if (_selectedIndex == 1) 
+                _buildAddFriendButton(),
+            ],
+          ),
         ),
       ),
     );
@@ -463,17 +462,19 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             iconWidget,
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              child: Padding(
-                padding: EdgeInsets.only(left: isSelected ? 8.0 : 0.0),
-                child: Text(
-                  isSelected ? label : '',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color),
-                  overflow: TextOverflow.fade,
-                  maxLines: 1,
-                  softWrap: false,
+            Flexible(
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                child: Padding(
+                  padding: EdgeInsets.only(left: isSelected ? 8.0 : 0.0),
+                  child: Text(
+                    isSelected ? label : '',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color),
+                    overflow: TextOverflow.fade,
+                    maxLines: 1,
+                    softWrap: false,
+                  ),
                 ),
               ),
             ),
@@ -483,10 +484,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // AJUSTE: O Positioned foi removido daqui
   Widget _buildCreateRachaButton(double navBarHeight) {
     return GestureDetector(
-      key: const ValueKey('createRachaButton'), // Chave para o AnimatedSwitcher
+      key: const ValueKey('createRachaButton'),
       onTap: _navigateAndCreateRacha,
       onTapDown: (_) => setState(() => _isFabPressed = true),
       onTapUp: (_) => setState(() => _isFabPressed = false),
