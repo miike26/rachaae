@@ -23,6 +23,8 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
   // A lista agora armazena o modelo completo do participante.
   List<ParticipantModel> _participants = [];
   String _selectedDateOption = 'Hoje';
+  // NOVO: Estado para a categoria selecionada
+  RachaCategory _selectedCategory = RachaCategory.outros;
 
   late final UserService _userService;
   late final RachaRepository _rachaRepository;
@@ -30,6 +32,16 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
   List<UserModel> _filteredFriends = [];
   bool _isLoadingFriends = false;
   bool _isUserLoggedIn = false;
+
+  // NOVO: Mapa para exibir nomes amigáveis para as categorias
+  final Map<RachaCategory, String> categoryDisplayNames = {
+    RachaCategory.comidaEBebida: 'Comida & Bebida',
+    RachaCategory.casaEContas: 'Casa & Contas',
+    RachaCategory.lazerEEventos: 'Lazer & Eventos',
+    RachaCategory.transporte: 'Transporte',
+    RachaCategory.viagens: 'Viagens',
+    RachaCategory.outros: 'Outros',
+  };
 
   @override
   void initState() {
@@ -126,6 +138,8 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
       date: _selectedDateOption,
       // Passa a lista de ParticipantModel diretamente.
       participants: _participants,
+      // NOVO: Passa a categoria selecionada
+      category: _selectedCategory,
     );
 
     Navigator.of(context).pop(newRacha);
@@ -154,6 +168,29 @@ class _CreateRachaScreenState extends State<CreateRachaScreen> {
               decoration: InputDecoration(hintText: 'Ex: Churrasco de Sábado', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
             ),
             const SizedBox(height: 24),
+
+            // NOVA SEÇÃO DE CATEGORIA
+            const Text('Categoria', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: RachaCategory.values.map((category) {
+                return ChoiceChip(
+                  label: Text(categoryDisplayNames[category]!),
+                  selected: _selectedCategory == category,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedCategory = category;
+                      });
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+
             const Text('Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Row(

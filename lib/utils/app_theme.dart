@@ -7,7 +7,8 @@ class AppTheme {
   static const Color darkTextColor = Color(0xFFFFFFFF);
   static const Color darkNavBar = Color(0xFF3C4052);
   static const Color darkSelectedNavItemBg = Color(0xFFF6F6F6);
-  static const Color darkSelectedNavItemFg = Color(0xFF303030); // Foreground (icon/text)
+  // CORREÇÃO: Cor do ícone/texto selecionado alterada para a que você pediu.
+  static const Color darkSelectedNavItemFg = Color(0xFF3C4052); // Foreground (icon/text)
   static const Color darkUnselectedNavItemFg = Color(0xFFFFFFFF);
 
   // Define o tema escuro completo
@@ -32,8 +33,8 @@ class AppTheme {
             // Novo estilo para o texto da navbar
             labelMedium: const TextStyle(
               fontFamily: 'Roboto', // Garante a fonte correta
-              fontSize: 16.31, // Equivalente a 48.93px em uma tela ~3x
-              fontWeight: FontWeight.w500, // Medium
+              fontSize: 17, // Equivalente a 48.93px em uma tela ~3x
+              fontWeight: FontWeight.w600, // Medium
               letterSpacing: 0.33,
             ),
           ),

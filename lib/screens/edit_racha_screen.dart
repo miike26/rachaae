@@ -20,6 +20,8 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
   late TextEditingController _titleController;
   late TextEditingController _participantController;
   late String _selectedDateOption;
+  // NOVO: Estado para a categoria
+  late RachaCategory _selectedCategory;
 
   // A lista agora armazena o modelo completo do participante.
   List<ParticipantModel> _participants = [];
@@ -31,12 +33,24 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
   bool _isLoadingFriends = false;
   bool _isUserLoggedIn = false;
 
+  // NOVO: Mapa para exibir nomes amigáveis para as categorias
+  final Map<RachaCategory, String> categoryDisplayNames = {
+    RachaCategory.comidaEBebida: 'Comida & Bebida',
+    RachaCategory.casaEContas: 'Casa & Contas',
+    RachaCategory.lazerEEventos: 'Lazer & Eventos',
+    RachaCategory.transporte: 'Transporte',
+    RachaCategory.viagens: 'Viagens',
+    RachaCategory.outros: 'Outros',
+  };
+
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.racha.title);
     _participantController = TextEditingController();
     _selectedDateOption = widget.racha.date;
+    // NOVO: Inicializa a categoria com a do racha existente
+    _selectedCategory = widget.racha.category;
 
     // Popula a lista com os participantes existentes.
     _participants = List.from(widget.racha.participants);
@@ -132,6 +146,8 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
       id: widget.racha.id,
       title: _titleController.text,
       date: _selectedDateOption,
+      // NOVO: Salva a categoria atualizada
+      category: _selectedCategory,
       participants: _participants,
       expenses: updatedExpenses,
       isFinished: widget.racha.isFinished,
@@ -162,6 +178,29 @@ class _EditRachaScreenState extends State<EditRachaScreen> {
               decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
             ),
             const SizedBox(height: 24),
+
+            // NOVA SEÇÃO DE CATEGORIA
+            const Text('Categoria', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: RachaCategory.values.map((category) {
+                return ChoiceChip(
+                  label: Text(categoryDisplayNames[category]!),
+                  selected: _selectedCategory == category,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedCategory = category;
+                      });
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 24),
+
             const Text('Data', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Row(

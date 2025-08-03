@@ -49,6 +49,7 @@ class RachasPage extends StatelessWidget {
             child: Text('EM ABERTO',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           ),
+          SizedBox(height: 13),
           ...openRachas.map((racha) {
             final index = rachas.indexOf(racha);
             return Padding(
@@ -65,19 +66,17 @@ class RachasPage extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
             child: Text('FINALIZADOS',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14,)),
           ),
+          SizedBox(height: 13),
           ...finishedRachas.map((racha) {
             final index = rachas.indexOf(racha);
             return Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
-              child: Opacity(
-                opacity: 0.7,
                 child: RachaCard(
                   racha: racha,
                   onTap: () => onRachaTap(racha, index),
                 ),
-              ),
             );
           }).toList(),
         ],

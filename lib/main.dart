@@ -11,6 +11,7 @@ import 'repositories/local_storage_repository.dart';
 import 'repositories/firestore_repository.dart';
 import 'screens/home_screen.dart';
 import 'utils/app_theme.dart'; // Importa o novo arquivo de tema
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (context) => SettingsService()),
         ChangeNotifierProvider(create: (context) => AuthService()),
         Provider(create: (context) => UserService()),
         ProxyProvider<AuthService, RachaRepository>(

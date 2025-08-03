@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+//import 'package:flutter_svg/flutter_svg.dart';
 
 // Importações de telas e serviços
 import 'profile_page.dart';
@@ -37,6 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
   User? _currentUser;
   bool _isInit = true;
   bool _isLoading = true;
+  // NOVO: Estado para a animação de toque do FAB
+  bool _isFabPressed = false;
 
   @override
   void didChangeDependencies() {
@@ -178,9 +180,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const double headerHeight = 170.0;
-    const double navBarHeight = 107.0;
-    const double extraTopPadding = 32.0;
+    const double headerHeight = 160.0;
+    const double navBarBottomOffset = 20.0;
+    const double extraTopPadding = 13.0;
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final scaleFactor = screenWidth / 448;
+    final double navBarHeight = 87.0 * scaleFactor;
 
     final List<Widget> pages = [
       RachasPage(
@@ -188,15 +194,15 @@ class _HomeScreenState extends State<HomeScreen> {
         onRachaTap: _navigateToRachaDetails,
         isLoading: _isLoading,
         topPadding: headerHeight + extraTopPadding,
-        bottomPadding: navBarHeight,
+        bottomPadding: navBarHeight + navBarBottomOffset,
       ),
       FriendsPage(
         topPadding: headerHeight + extraTopPadding,
-        bottomPadding: navBarHeight,
+        bottomPadding: navBarHeight + navBarBottomOffset,
       ),
       PerfilPage(
         topPadding: headerHeight + extraTopPadding,
-        bottomPadding: navBarHeight,
+        bottomPadding: navBarHeight + navBarBottomOffset,
       ),
     ];
 
@@ -213,17 +219,26 @@ class _HomeScreenState extends State<HomeScreen> {
             children: pages,
           ),
           _buildFloatingHeader(headerHeight),
-          _buildCustomNavBar(),
+          _buildCustomNavBar(navBarHeight, navBarBottomOffset, scaleFactor),
+          // AJUSTE: O Positioned agora fica fora do AnimatedSwitcher
+          Positioned(
+            bottom: navBarBottomOffset + 110.0,
+            right: 17.0,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(scale: animation, child: child),
+                );
+              },
+              child: _selectedIndex == 0
+                  ? _buildCreateRachaButton(navBarHeight)
+                  : const SizedBox.shrink(key: ValueKey('emptyFab')),
+            ),
+          ),
         ],
       ),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton(
-              onPressed: _navigateAndCreateRacha,
-              shape: const CircleBorder(),
-              child: const Icon(Icons.add, size: 28),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -246,30 +261,31 @@ class _HomeScreenState extends State<HomeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            stops: const [0.1, 0.7, 1.0], // 10%, 70%, 100%
+            stops: const [0.1, 0.7, 1.0],
             colors: [
-              headerColor.withOpacity(1.0),   // 100%
-              headerColor.withOpacity(0.95),  // 95%
-              headerColor.withOpacity(0.80),  // 80%
+              headerColor.withOpacity(1.0),
+              headerColor.withOpacity(0.95),
+              headerColor.withOpacity(0.80),
             ],
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              titles[_selectedIndex],
-              style: Theme.of(context).textTheme.displayLarge,
+            Padding(
+              padding: const EdgeInsets.only(top: 12.0), // <-- Ajuste este valor
+              child: Text(
+                titles[_selectedIndex],
+                style: Theme.of(context).textTheme.displayLarge,
+              ),
             ),
             if (_selectedIndex == 0)
               Padding(
-                padding: const EdgeInsets.only(top: 2.0),
+                padding: const EdgeInsets.only(top: 20.0),
                 child: IconButton(
                   icon: const Icon(Icons.search, size: 30),
-                  onPressed: () {
-                    // TODO: Implementar lógica de busca
-                  },
+                  onPressed: () {},
                 ),
               ),
             if (_selectedIndex == 1) _buildAddFriendButton(),
@@ -318,23 +334,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCustomNavBar() {
+  Widget _buildCustomNavBar(double navBarHeight, double navBarBottomOffset, double scaleFactor) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final authService = Provider.of<AuthService>(context, listen: false);
     
-    // Dimensões proporcionais baseadas na tela de referência
-    final scaleFactor = screenWidth / 448; // 1344px / 3 (densidade de pixel ~3x)
-
     final double navBarWidth = 347.96 * scaleFactor;
-    final double navBarHeight = 87.0 * scaleFactor;
     final double navBarRadius = 54.37 * scaleFactor;
-
     final double highlightWidth = 147.88 * scaleFactor;
     final double highlightHeight = 54.37 * scaleFactor;
     
     final positions = _calculateItemPositions(navBarWidth, highlightWidth);
 
     return Positioned(
-      bottom: 20,
+      bottom: navBarBottomOffset,
       left: (screenWidth - navBarWidth) / 2,
       right: (screenWidth - navBarWidth) / 2,
       child: Container(
@@ -351,10 +363,16 @@ class _HomeScreenState extends State<HomeScreen> {
               AppTheme.darkNavBar.withOpacity(0.90),
             ],
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 48.93,
+              offset: const Offset(0, 16.31),
+            ),
+          ],
         ),
         child: Stack(
           children: [
-            // Bolha de destaque animada
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -369,10 +387,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            // Itens da Navbar
             _navBarItem(Icons.home, 'RACHAS', 0, positions[0]!, highlightWidth),
-            _navBarItem(Icons.people_outline, 'AMIGOS', 1, positions[1]!, highlightWidth),
-            _navBarItem(Icons.person_outline, 'PERFIL', 2, positions[2]!, highlightWidth),
+            _navBarItem(Icons.people_alt, 'AMIGOS', 1, positions[1]!, highlightWidth),
+            _navBarItem(Icons.person_outline, 'PERFIL', 2, positions[2]!, highlightWidth, authService: authService),
           ],
         ),
       ),
@@ -380,49 +397,57 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Map<dynamic, double> _calculateItemPositions(double navBarWidth, double highlightWidth) {
-    // Dimensões baseadas em pixels lógicos
     const double edgePadding = 26.0;
     const double unselectedIconWidth = 48.0;
-
     double pos0, pos1, pos2, highlightPos;
+    final double contentWidth = navBarWidth - (2 * edgePadding);
+    final double totalItemWidth = (2 * unselectedIconWidth) + highlightWidth;
+    final double spacing = (contentWidth - totalItemWidth) / 2.0;
 
     switch (_selectedIndex) {
-      case 0: // Home selecionado
+      case 0:
         highlightPos = edgePadding;
         pos0 = edgePadding;
-        // Calcula o espaço restante à direita da bolha
-        final remainingSpace = navBarWidth - highlightWidth - edgePadding;
-        // Divide o espaço restante em 3 partes para espaçar os 2 ícones uniformemente
-        final spacing = (remainingSpace - (unselectedIconWidth * 2)) / 3;
         pos1 = highlightPos + highlightWidth + spacing;
         pos2 = pos1 + unselectedIconWidth + spacing;
         break;
-      case 1: // Amigos (central) selecionado
-        final double slotWidth = navBarWidth / 3;
-        highlightPos = (navBarWidth / 2) - (highlightWidth / 2);
-        pos0 = (slotWidth / 2) - (unselectedIconWidth / 2);
+      case 1:
+        pos0 = edgePadding;
+        highlightPos = pos0 + unselectedIconWidth + spacing;
         pos1 = highlightPos;
-        pos2 = navBarWidth - slotWidth + (slotWidth / 2) - (unselectedIconWidth / 2);
+        pos2 = highlightPos + highlightWidth + spacing;
         break;
-      case 2: // Perfil selecionado
+      case 2:
       default:
-        highlightPos = navBarWidth - highlightWidth - edgePadding;
-        pos2 = highlightPos;
-        // Calcula o espaço restante à esquerda da bolha
-        final remainingSpace = navBarWidth - highlightWidth - edgePadding;
-        // Divide o espaço restante em 3 partes para espaçar os 2 ícones uniformemente
-        final spacing = (remainingSpace - (unselectedIconWidth * 2)) / 3;
-        pos0 = edgePadding + spacing;
+        pos0 = edgePadding;
         pos1 = pos0 + unselectedIconWidth + spacing;
+        highlightPos = pos1 + unselectedIconWidth + spacing;
+        pos2 = highlightPos;
         break;
     }
     return {0: pos0, 1: pos1, 2: pos2, 'highlight': highlightPos};
   }
 
-  Widget _navBarItem(IconData icon, String label, int index, double leftPosition, double highlightWidth) {
+  Widget _navBarItem(IconData icon, String label, int index, double leftPosition, double highlightWidth, {AuthService? authService}) {
     final isSelected = _selectedIndex == index;
     final color = isSelected ? AppTheme.darkSelectedNavItemFg : AppTheme.darkUnselectedNavItemFg;
     final itemWidth = isSelected ? highlightWidth : 48.0;
+    const double iconSize = 30.0;
+    Widget iconWidget;
+    final user = authService?.user;
+
+    if (index == 2 && user?.photoURL != null) {
+      iconWidget = CircleAvatar(
+        radius: iconSize / 2,
+        backgroundColor: Colors.white,
+        child: CircleAvatar(
+          radius: (iconSize / 2) - 3.26,
+          backgroundImage: NetworkImage(user!.photoURL!),
+        ),
+      );
+    } else {
+      iconWidget = Icon(icon, color: color, size: iconSize);
+    }
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 300),
@@ -437,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color),
+            iconWidget,
             AnimatedSize(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
@@ -453,6 +478,49 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // AJUSTE: O Positioned foi removido daqui
+  Widget _buildCreateRachaButton(double navBarHeight) {
+    return GestureDetector(
+      key: const ValueKey('createRachaButton'), // Chave para o AnimatedSwitcher
+      onTap: _navigateAndCreateRacha,
+      onTapDown: (_) => setState(() => _isFabPressed = true),
+      onTapUp: (_) => setState(() => _isFabPressed = false),
+      onTapCancel: () => setState(() => _isFabPressed = false),
+      child: AnimatedScale(
+        scale: _isFabPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        child: Container(
+          height: 75,
+          width: 75,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0.0, 1.0],
+              colors: [
+                const Color(0xFF64697D).withOpacity(0.90),
+                const Color(0xFF3C4052).withOpacity(1.00),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.add,
+            size: 30.0,
+            color: Colors.white,
+          ),
         ),
       ),
     );

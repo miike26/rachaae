@@ -13,6 +13,9 @@ Racha _$RachaFromJson(Map<String, dynamic> json) => Racha(
   participants: (json['participants'] as List<dynamic>)
       .map((e) => ParticipantModel.fromJson(e as Map<String, dynamic>))
       .toList(),
+  category:
+      $enumDecodeNullable(_$RachaCategoryEnumMap, json['category']) ??
+      RachaCategory.outros,
   expenses: (json['expenses'] as List<dynamic>?)
       ?.map((e) => Expense.fromJson(e as Map<String, dynamic>))
       .toList(),
@@ -30,12 +33,22 @@ Map<String, dynamic> _$RachaToJson(Racha instance) => <String, dynamic>{
   'id': instance.id,
   'title': instance.title,
   'date': instance.date,
+  'category': _$RachaCategoryEnumMap[instance.category]!,
   'participants': instance.participants.map((e) => e.toJson()).toList(),
   'expenses': instance.expenses.map((e) => e.toJson()).toList(),
   'serviceFeeValue': instance.serviceFeeValue,
   'serviceFeeType': _$FeeTypeEnumMap[instance.serviceFeeType]!,
   'serviceFeeParticipants': instance.serviceFeeParticipants,
   'isFinished': instance.isFinished,
+};
+
+const _$RachaCategoryEnumMap = {
+  RachaCategory.comidaEBebida: 'comidaEBebida',
+  RachaCategory.casaEContas: 'casaEContas',
+  RachaCategory.lazerEEventos: 'lazerEEventos',
+  RachaCategory.transporte: 'transporte',
+  RachaCategory.viagens: 'viagens',
+  RachaCategory.outros: 'outros',
 };
 
 const _$FeeTypeEnumMap = {
