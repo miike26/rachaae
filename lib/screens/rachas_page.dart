@@ -9,6 +9,7 @@ class RachasPage extends StatelessWidget {
   final bool isLoading;
   final double topPadding;
   final double bottomPadding;
+  final ScrollController scrollController; // Adiciona o ScrollController
 
   const RachasPage({
     super.key,
@@ -17,6 +18,7 @@ class RachasPage extends StatelessWidget {
     required this.isLoading,
     required this.topPadding,
     required this.bottomPadding,
+    required this.scrollController, // Requer o ScrollController
   });
 
   @override
@@ -41,6 +43,7 @@ class RachasPage extends StatelessWidget {
     }
 
     return ListView(
+      controller: scrollController, // Atribui o controller ao ListView
       padding: EdgeInsets.fromLTRB(16.0, topPadding, 16.0, bottomPadding),
       children: [
         if (openRachas.isNotEmpty) ...[
@@ -49,7 +52,7 @@ class RachasPage extends StatelessWidget {
             child: Text('EM ABERTO',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           ),
-          SizedBox(height: 13),
+          const SizedBox(height: 13),
           ...openRachas.map((racha) {
             final index = rachas.indexOf(racha);
             return Padding(
@@ -68,7 +71,7 @@ class RachasPage extends StatelessWidget {
             child: Text('FINALIZADOS',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14,)),
           ),
-          SizedBox(height: 13),
+          const SizedBox(height: 13),
           ...finishedRachas.map((racha) {
             final index = rachas.indexOf(racha);
             return Padding(

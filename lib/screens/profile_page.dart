@@ -165,21 +165,33 @@ class _PerfilPageState extends State<PerfilPage> {
               const SizedBox(height: 30),
               if (isUserLoggedIn) _buildUsernameSection(userProfile),
               
-              // NOVO: Seção de Configurações de Aparência
               const SizedBox(height: 20),
               const Text('APARÊNCIA', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Consumer<SettingsService>(
                 builder: (context, settings, child) {
-                  return Card(
-                    child: SwitchListTile(
-                      title: const Text("Estilo de Card Detalhado"),
-                      subtitle: const Text("Barra colorida em vez do fundo todo."),
-                      value: settings.cardStyle == CardStyle.detailed,
-                      onChanged: (value) {
-                        settings.toggleCardStyle();
-                      },
-                    ),
+                  return Column(
+                    children: [
+                      Card(
+                        child: SwitchListTile(
+                          title: const Text("Tema Escuro"),
+                          value: settings.themeMode == ThemeMode.dark,
+                          onChanged: (value) {
+                            settings.toggleTheme();
+                          },
+                        ),
+                      ),
+                      Card(
+                        child: SwitchListTile(
+                          title: const Text("Estilo de Card Detalhado"),
+                          subtitle: const Text("Barra colorida em vez do fundo todo."),
+                          value: settings.cardStyle == CardStyle.detailed,
+                          onChanged: (value) {
+                            settings.toggleCardStyle();
+                          },
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),

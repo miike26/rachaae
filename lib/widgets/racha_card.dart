@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import '../models/racha_model.dart';
 import '../services/settings_service.dart';
+import '../utils/app_theme.dart';
 import '../utils/category_helper.dart';
 import '../utils/color_helper.dart';
 
@@ -25,18 +26,36 @@ class RachaCard extends StatelessWidget {
       builder: (context, settings, child) {
         final isDetailedStyle = settings.cardStyle == CardStyle.detailed;
         final categoryColor = CategoryHelper.getColor(racha.category);
-        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        final isLightTheme = Theme.of(context).brightness == Brightness.light;
 
         // Define as cores com base no estilo do card e no tema do app
-        final Color cardBackgroundColor;
+        Color? cardBackgroundColor;
         final Color textColor;
+        Gradient? cardGradient;
 
         if (isDetailedStyle) {
-          cardBackgroundColor = const Color(0xFF323645);
-          textColor = Colors.white; // Texto claro para fundo escuro
+          if (isLightTheme) {
+            // CORREÇÃO: Removida a linha que definia a cor de fundo como transparente.
+            // Agora apenas o gradiente será responsável pelo fundo.
+            cardGradient = LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              stops: const [0.0, 1.0],
+              colors: [
+                AppTheme.lightDetailedCardBg1.withOpacity(0.30),
+                AppTheme.lightDetailedCardBg2.withOpacity(0.80)
+              ],
+            );
+            textColor = AppTheme.lightTextColor;
+          } else {
+            cardBackgroundColor = const Color(0xFF323645);
+            cardGradient = null;
+            textColor = Colors.white;
+          }
         } else {
           cardBackgroundColor = categoryColor;
-          textColor = isDarkMode ? const Color(0xFF222531) : const Color(0xFF303030);
+          cardGradient = null;
+          textColor = isLightTheme ? const Color(0xFF303030) : const Color(0xFF222531);
         }
 
         // O conteúdo do card é extraído para um widget separado para evitar repetição.
@@ -44,13 +63,26 @@ class RachaCard extends StatelessWidget {
 
         return GestureDetector(
           onTap: onTap,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24.0),
-            child: SizedBox(
-              height: 140.0,
-              child: isDetailedStyle
-                  ? _buildDetailedView(cardBackgroundColor, categoryColor, cardContent)
-                  : _buildColorfulView(cardBackgroundColor, cardContent),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  offset: const Offset(0, 10),
+                  blurRadius: 2.93,
+                  spreadRadius: 0.0,
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24.0),
+              child: SizedBox(
+                height: 140.0,
+                child: isDetailedStyle
+                    ? _buildDetailedView(cardBackgroundColor, categoryColor, cardContent, cardGradient)
+                    : _buildColorfulView(cardBackgroundColor!, cardContent),
+              ),
             ),
           ),
         );
@@ -92,11 +124,15 @@ class RachaCard extends StatelessWidget {
   }
 
   // Constrói o visual do card com a barra lateral colorida
-  Widget _buildDetailedView(Color backgroundColor, Color categoryColor, Widget content) {
+  Widget _buildDetailedView(Color? backgroundColor, Color categoryColor, Widget content, Gradient? gradient) {
     final double svgOpacity = racha.isFinished ? 0.5 : 1.0;
+    final bool isLightTheme = gradient != null;
 
     return Container(
-      color: backgroundColor,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        gradient: gradient,
+      ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -117,15 +153,15 @@ class RachaCard extends StatelessWidget {
               right: 5,
               child: Opacity(
                 // Aplica 80% de opacidade, e também a opacidade de 'finalizado' se aplicável.
-                opacity: svgOpacity * 0.4,
+                opacity: svgOpacity * (isLightTheme ? 0.15 : 0.4),
                 child: Transform.rotate(
                   angle: -13.00 * math.pi / 180,
                   child: SvgPicture.asset(
                     CategoryHelper.getImagePath(racha.category),
                     width: 120,
                     height: 95.07,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white, // Cor branca para o SVG
+                    colorFilter: ColorFilter.mode(
+                      isLightTheme ? AppTheme.lightTextColor : Colors.white, // Cor branca para o SVG
                       BlendMode.srcIn,
                     ),
                   ),

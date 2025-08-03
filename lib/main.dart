@@ -43,13 +43,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Racha Ae',
-      theme: AppTheme.lightTheme, // Define o tema claro
-      darkTheme: AppTheme.darkTheme, // Define o tema escuro
-      themeMode: ThemeMode.dark, // Força o modo escuro por enquanto
-      home: const HomeScreen(),
+    // O Consumer<SettingsService> agora controla o tema do MaterialApp
+    return Consumer<SettingsService>(
+      builder: (context, settings, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Racha Ae',
+          theme: AppTheme.lightTheme, // Define o tema claro
+          darkTheme: AppTheme.darkTheme, // Define o tema escuro
+          themeMode: settings.themeMode, // Usa o ThemeMode do serviço
+          home: const HomeScreen(),
+        );
+      },
     );
   }
 }

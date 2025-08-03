@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-//import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:ui';
 
 // Importações de telas e serviços
 import 'profile_page.dart';
@@ -30,6 +31,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
+  final ScrollController _scrollController = ScrollController();
 
   // Lógica de estado que estava em MainScreenState
   List<Racha> _rachas = [];
@@ -37,8 +39,16 @@ class _HomeScreenState extends State<HomeScreen> {
   User? _currentUser;
   bool _isInit = true;
   bool _isLoading = true;
-  // NOVO: Estado para a animação de toque do FAB
   bool _isFabPressed = false;
+
+  // NOVO: Estado para controlar a opacidade do cabeçalho
+  double _headerOpacity = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void didChangeDependencies() {
@@ -69,7 +79,23 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  // NOVO: Listener de scroll para animar o cabeçalho
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      final offset = _scrollController.offset;
+      // A animação começa após rolar 50 pixels e vai até 150 pixels
+      final newOpacity = ((offset - 50) / 100).clamp(0.0, 1.0);
+      if (newOpacity != _headerOpacity) {
+        setState(() {
+          _headerOpacity = newOpacity;
+        });
+      }
+    }
   }
 
   Future<void> _handleUserDataMigration() async {
@@ -187,6 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final scaleFactor = screenWidth / 448;
     final double navBarHeight = 87.0 * scaleFactor;
+    final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
 
     final List<Widget> pages = [
       RachasPage(
@@ -195,6 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
         isLoading: _isLoading,
         topPadding: headerHeight + extraTopPadding,
         bottomPadding: navBarHeight + navBarBottomOffset,
+        scrollController: _scrollController, // Passa o controller para a página
       ),
       FriendsPage(
         topPadding: headerHeight + extraTopPadding,
@@ -209,6 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Stack(
         children: [
+          // NOVO: Background SVG para o tema claro
+          if (isLightTheme) _buildBackgroundVector(),
           PageView(
             controller: _pageController,
             onPageChanged: (index) {
@@ -241,9 +271,58 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Widget para o SVG de fundo com a correção
+  Widget _buildBackgroundVector() {
+    // --- CONTROLES DO SVG ---
+    final double posX = -0.2; // -1.0 (esquerda) a 1.0 (direita)
+    final double posY = 0.10; // -1.0 (topo) a 1.0 (base)
+    final double scale = 1.5; // Fator de zoom
+    final double blur = 0.0; // Intensidade do desfoque
+    final double opacity = 1.0; // Opacidade geral
+    // -------------------------
+
+    return Positioned.fill(
+      child: ClipRect(
+        child: Transform.scale(
+          scale: scale,
+          alignment: Alignment(posX, posY),
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+            child: Opacity( // Usa o widget Opacity para não afetar as cores
+              opacity: opacity,
+              child: SvgPicture.asset(
+                'assets/images/background_vector.svg',
+                fit: BoxFit.cover,
+                // colorFilter foi removido para usar as cores originais do SVG
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFloatingHeader(double height) {
     const List<String> titles = ['Meus Rachas', 'Amigos', 'Perfil'];
-    const Color headerColor = Color(0xFF222531);
+    final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
+    final Color headerColor = isLightTheme ? AppTheme.lightHeaderBg : AppTheme.darkHeaderBg;
+
+    // Define os stops do gradiente com base no tema e na opacidade do scroll
+    final List<Color> colors;
+    if (isLightTheme) {
+      colors = [
+        headerColor.withOpacity(1.0 * _headerOpacity),
+        headerColor.withOpacity(0.95 * _headerOpacity),
+        headerColor.withOpacity(0.80 * _headerOpacity),
+        headerColor.withOpacity(0.0 * _headerOpacity),
+      ];
+    } else {
+      colors = [
+        headerColor.withOpacity(1.0),
+        headerColor.withOpacity(0.95),
+        headerColor.withOpacity(0.80),
+      ];
+    }
 
     return Positioned(
       top: 0,
@@ -260,24 +339,21 @@ class _HomeScreenState extends State<HomeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            stops: const [0.1, 0.7, 1.0],
-            colors: [
-              headerColor.withOpacity(1.0),
-              headerColor.withOpacity(0.95),
-              headerColor.withOpacity(0.80),
-            ],
+            stops: isLightTheme ? const [0.1, 0.5, 0.75, 1.0] : const [0.1, 0.7, 1.0],
+            colors: colors,
           ),
         ),
-        // SOLUÇÃO: Adiciona um Padding geral e alinha a Row na parte inferior
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 22.0), // Padding inferior
+          padding: const EdgeInsets.only(bottom: 22.0),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end, // Alinha na base
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
                 child: Text(
                   titles[_selectedIndex],
-                  style: Theme.of(context).textTheme.displayLarge,
+                  style: isLightTheme
+                      ? Theme.of(context).textTheme.displayLarge?.copyWith(color: AppTheme.lightTextColor)
+                      : Theme.of(context).textTheme.displayLarge,
                 ),
               ),
               if (_selectedIndex == 0)
@@ -336,6 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCustomNavBar(double navBarHeight, double navBarBottomOffset, double scaleFactor) {
     final screenWidth = MediaQuery.of(context).size.width;
     final authService = Provider.of<AuthService>(context, listen: false);
+    final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
     
     final double navBarWidth = 347.96 * scaleFactor;
     final double navBarRadius = 54.37 * scaleFactor;
@@ -356,11 +433,10 @@ class _HomeScreenState extends State<HomeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            stops: const [0.0, 0.5],
-            colors: [
-              AppTheme.darkNavBar.withOpacity(0.95),
-              AppTheme.darkNavBar.withOpacity(0.90),
-            ],
+            stops: isLightTheme ? const [0.0, 0.5] : const [0.0, 0.5],
+            colors: isLightTheme
+                ? [ AppTheme.lightNavBar.withOpacity(0.90), AppTheme.lightNavBar.withOpacity(0.70) ]
+                : [ AppTheme.darkNavBar.withOpacity(0.95), AppTheme.darkNavBar.withOpacity(0.90) ],
           ),
           boxShadow: [
             BoxShadow(
@@ -381,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: highlightWidth,
                 height: highlightHeight,
                 decoration: BoxDecoration(
-                  color: AppTheme.darkSelectedNavItemBg,
+                  color: isLightTheme ? AppTheme.lightSelectedNavItemBg : AppTheme.darkSelectedNavItemBg,
                   borderRadius: BorderRadius.circular(navBarRadius),
                 ),
               ),
@@ -429,7 +505,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _navBarItem(IconData icon, String label, int index, double leftPosition, double highlightWidth, {AuthService? authService}) {
     final isSelected = _selectedIndex == index;
-    final color = isSelected ? AppTheme.darkSelectedNavItemFg : AppTheme.darkUnselectedNavItemFg;
+    final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
+    final color = isSelected
+        ? (isLightTheme ? AppTheme.lightSelectedNavItemFg : AppTheme.darkSelectedNavItemFg)
+        : (isLightTheme ? AppTheme.lightUnselectedNavItemFg : AppTheme.darkUnselectedNavItemFg);
     final itemWidth = isSelected ? highlightWidth : 48.0;
     const double iconSize = 30.0;
     Widget iconWidget;
@@ -438,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == 2 && user?.photoURL != null) {
       iconWidget = CircleAvatar(
         radius: iconSize / 2,
-        backgroundColor: Colors.white,
+        backgroundColor: isLightTheme ? AppTheme.lightUnselectedNavItemFg : Colors.white,
         child: CircleAvatar(
           radius: (iconSize / 2) - 3.26,
           backgroundImage: NetworkImage(user!.photoURL!),
@@ -485,6 +564,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCreateRachaButton(double navBarHeight) {
+    final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
     return GestureDetector(
       key: const ValueKey('createRachaButton'),
       onTap: _navigateAndCreateRacha,
@@ -502,11 +582,10 @@ class _HomeScreenState extends State<HomeScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              stops: const [0.0, 1.0],
-              colors: [
-                const Color(0xFF64697D).withOpacity(0.90),
-                const Color(0xFF3C4052).withOpacity(1.00),
-              ],
+              stops: isLightTheme ? const [0.0, 1.0] : const [0.0, 1.0],
+              colors: isLightTheme
+                  ? [ AppTheme.lightFab.withOpacity(0.95), AppTheme.lightFab.withOpacity(0.70) ]
+                  : [ AppTheme.darkFab1.withOpacity(0.90), AppTheme.darkFab2.withOpacity(1.00) ],
             ),
             boxShadow: [
               BoxShadow(
@@ -516,10 +595,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             Icons.add,
             size: 30.0,
-            color: Colors.white,
+            color: isLightTheme ? AppTheme.lightFabIcon : AppTheme.darkFabIcon,
           ),
         ),
       ),
