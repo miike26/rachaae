@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
+import 'dart:ui'; // Importado para usar o ImageFilter
 import '../models/racha_model.dart';
 import '../services/settings_service.dart';
 import '../utils/app_theme.dart';
@@ -35,15 +36,13 @@ class RachaCard extends StatelessWidget {
 
         if (isDetailedStyle) {
           if (isLightTheme) {
-            // CORREÇÃO: Removida a linha que definia a cor de fundo como transparente.
-            // Agora apenas o gradiente será responsável pelo fundo.
             cardGradient = LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
               stops: const [0.0, 1.0],
               colors: [
-                AppTheme.lightDetailedCardBg1.withOpacity(0.30),
-                AppTheme.lightDetailedCardBg2.withOpacity(0.80)
+                AppTheme.lightDetailedCardBg1.withOpacity(0.50),
+                AppTheme.lightDetailedCardBg2.withOpacity(0.85)
               ],
             );
             textColor = AppTheme.lightTextColor;
@@ -61,29 +60,56 @@ class RachaCard extends StatelessWidget {
         // O conteúdo do card é extraído para um widget separado para evitar repetição.
         final cardContent = _buildCardContent(context, textColor);
 
+        // --- SOLUÇÃO SEM STACK, CONFORME SUGERIDO ---
+        // Usamos uma Column e um Transform.translate para sobrepor os widgets.
         return GestureDetector(
           onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
-                  offset: const Offset(0, 10),
-                  blurRadius: 2.93,
-                  spreadRadius: 0.0,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // WIDGET 1: O CARD REAL COM O CONTEÚDO
+              // Ele é movido para cima para se sobrepor ao container da sombra.
+              Transform.translate(
+                offset: const Offset(0, -3), // Move o card para cima
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24.0),
+                  child: SizedBox(
+                    height: 140.0,
+                    child: isDetailedStyle
+                        ? _buildDetailedView(cardBackgroundColor, categoryColor, cardContent, cardGradient)
+                        : _buildColorfulView(cardBackgroundColor!, cardContent),
+                  ),
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24.0),
-              child: SizedBox(
-                height: 140.0,
-                child: isDetailedStyle
-                    ? _buildDetailedView(cardBackgroundColor, categoryColor, cardContent, cardGradient)
-                    : _buildColorfulView(cardBackgroundColor!, cardContent),
               ),
-            ),
+
+              // WIDGET 2: O CONTAINER DA SOMBRA
+              // Fica "antes" no código, mas visualmente "atrás" por causa do translate.
+              // Ele não tem conteúdo, apenas a sombra.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 17.0),
+                child: Container(
+                  height:
+                      1.5, // A altura é zero, a sombra se projeta mesmo assim
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(30.0),
+                      bottomRight: Radius.circular(30.0),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.40),
+                        offset: const Offset(
+                          0,
+                          0.5,
+                        ), // A sombra é projetada para cima, mas como o card está por cima, o efeito é de sombra para baixo
+                        blurRadius: 6.5,
+                        spreadRadius: -0.0,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -153,7 +179,7 @@ class RachaCard extends StatelessWidget {
               right: 5,
               child: Opacity(
                 // Aplica 80% de opacidade, e também a opacidade de 'finalizado' se aplicável.
-                opacity: svgOpacity * (isLightTheme ? 0.15 : 0.4),
+                opacity: svgOpacity * (isLightTheme ? 0.45 : 0.4),
                 child: Transform.rotate(
                   angle: -13.00 * math.pi / 180,
                   child: SvgPicture.asset(
@@ -235,7 +261,7 @@ class RachaCard extends StatelessWidget {
   }
 
   Widget _buildParticipantAvatars() {
-    const maxAvatars = 5;
+    const maxAvatars = 6;
     final itemsToShow = racha.participants.length > maxAvatars
         ? maxAvatars
         : racha.participants.length;
@@ -257,9 +283,9 @@ class RachaCard extends StatelessWidget {
             if (index == maxAvatars - 1 &&
                 racha.participants.length > maxAvatars) {
               return Positioned(
-                left: (index * 24).toDouble(),
+                left: (index * 23).toDouble(),
                 child: CircleAvatar(
-                  radius: 16,
+                  radius: 15,
                   backgroundColor: Colors.grey[300],
                   child: Text(
                       '+${racha.participants.length - (maxAvatars - 1)}',
@@ -272,9 +298,9 @@ class RachaCard extends StatelessWidget {
             }
 
             return Positioned(
-              left: (index * 24).toDouble(),
+              left: (index * 23).toDouble(),
               child: CircleAvatar(
-                radius: 16,
+                radius: 15,
                 backgroundColor: ColorHelper.getColorForName(name),
                 backgroundImage: (photoURL != null && photoURL.isNotEmpty)
                     ? NetworkImage(photoURL)

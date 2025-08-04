@@ -207,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     const double headerHeight = 150.0;
-    const double navBarBottomOffset = 20.0;
+    const double navBarBottomOffset = 27.0;
     const double extraTopPadding = 13.0;
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -275,10 +275,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBackgroundVector() {
     // --- CONTROLES DO SVG ---
     final double posX = -0.2; // -1.0 (esquerda) a 1.0 (direita)
-    final double posY = 0.10; // -1.0 (topo) a 1.0 (base)
+    final double posY = -0.20; // -1.0 (topo) a 1.0 (base)
     final double scale = 1.5; // Fator de zoom
-    final double blur = 0.0; // Intensidade do desfoque
-    final double opacity = 1.0; // Opacidade geral
+    final double blur = 3250.0; // Intensidade do desfoque
+    final double opacity = 0.30; // Opacidade geral
     // -------------------------
 
     return Positioned.fill(
@@ -435,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> {
             end: Alignment.bottomCenter,
             stops: isLightTheme ? const [0.0, 0.5] : const [0.0, 0.5],
             colors: isLightTheme
-                ? [ AppTheme.lightNavBar.withOpacity(0.90), AppTheme.lightNavBar.withOpacity(0.70) ]
+                ? [ AppTheme.lightNavBar.withOpacity(0.95), AppTheme.lightNavBar.withOpacity(0.85) ]
                 : [ AppTheme.darkNavBar.withOpacity(0.95), AppTheme.darkNavBar.withOpacity(0.90) ],
           ),
           boxShadow: [
@@ -516,10 +516,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (index == 2 && user?.photoURL != null) {
       iconWidget = CircleAvatar(
-        radius: iconSize / 2,
+        radius: iconSize / 2.0,
         backgroundColor: isLightTheme ? AppTheme.lightUnselectedNavItemFg : Colors.white,
         child: CircleAvatar(
-          radius: (iconSize / 2) - 3.26,
+          radius: (iconSize / 2) - 1.5,
           backgroundImage: NetworkImage(user!.photoURL!),
         ),
       );
@@ -584,19 +584,19 @@ class _HomeScreenState extends State<HomeScreen> {
               end: Alignment.bottomCenter,
               stops: isLightTheme ? const [0.0, 1.0] : const [0.0, 1.0],
               colors: isLightTheme
-                  ? [ AppTheme.lightFab.withOpacity(0.95), AppTheme.lightFab.withOpacity(0.70) ]
+                  ? [ AppTheme.lightFab.withOpacity(0.70), AppTheme.lightFab.withOpacity(0.90) ]
                   : [ AppTheme.darkFab1.withOpacity(0.90), AppTheme.darkFab2.withOpacity(1.00) ],
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: Colors.black.withOpacity(0.30),
+                blurRadius: 10,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: Icon(
-            Icons.add,
+            Icons.add_outlined,
             size: 30.0,
             color: isLightTheme ? AppTheme.lightFabIcon : AppTheme.darkFabIcon,
           ),
