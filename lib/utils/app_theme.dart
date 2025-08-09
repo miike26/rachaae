@@ -27,7 +27,7 @@ class AppTheme {
   static const Color lightVectorColor = Color(0xFF3C4052);
   // CORREÇÃO: Cores base para o gradiente agora são opacas.
   // A opacidade será aplicada diretamente no widget do card.
-  static const Color lightDetailedCardBg1 = Color(0xFFEFFFFF);
+  static const Color lightDetailedCardBg1 = Color(0xFFFFFFFF);
   static const Color lightDetailedCardBg2 = Color(0xFFFFFFFF);
 
   // Define o tema escuro completo

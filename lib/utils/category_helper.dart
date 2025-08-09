@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/racha_model.dart';
+import '../services/settings_service.dart'; // Importado para ter acesso ao CardStyle
+import '../utils/app_theme.dart'; // Importado para cores do tema
 
 /// Uma classe de ajuda para centralizar a lógica de estilo das categorias.
-/// Mapeia cada categoria a uma cor e um caminho de imagem específicos.
+/// Mapeia cada categoria a uma cor e um caminho de ícone específicos.
 class CategoryHelper {
+  // A variável booleana estática foi removida daqui.
+  // A decisão agora é passada como um parâmetro na função getIconColor.
+
   /// Retorna uma cor de fundo específica baseada na categoria do racha.
   static Color getColor(RachaCategory category) {
     switch (category) {
@@ -23,45 +28,66 @@ class CategoryHelper {
     }
   }
 
-  /// Retorna o caminho do asset da imagem para a categoria do racha.
+  /// Retorna o caminho do asset do ÍCONE para a categoria do racha.
   static String getImagePath(RachaCategory category) {
-    // Por enquanto, usa o mesmo SVG para todas as categorias, exceto "Outros".
-    // No futuro, você pode criar SVGs específicos para cada um.
     switch (category) {
       case RachaCategory.comidaEBebida:
-        return 'assets/images/cat_comida.svg';
+        return 'assets/images/icon_cat_comida.svg';
       case RachaCategory.casaEContas:
-        return 'assets/images/cat_comida.svg'; // Usando o mesmo SVG
+        return 'assets/images/icon_cat_casa.svg';
       case RachaCategory.lazerEEventos:
-        return 'assets/images/cat_comida.svg'; // Usando o mesmo SVG
+        return 'assets/images/icon_cat_lazer.svg';
       case RachaCategory.transporte:
-        return 'assets/images/cat_comida.svg'; // Usando o mesmo SVG
+        return 'assets/images/icon_cat_transporte.svg';
       case RachaCategory.viagens:
-        return 'assets/images/cat_comida.svg'; // Usando o mesmo SVG
+        return 'assets/images/icon_cat_viagens.svg';
       case RachaCategory.outros:
       default:
-        // Pode retornar um SVG genérico ou um caminho vazio se não quiser ícone para "Outros"
-        return 'assets/images/cat_outros.svg';
+        return 'assets/images/icon_cat_outros.svg';
     }
   }
 
-  /// Retorna a cor específica para a marca d'água SVG.
-  static Color getSvgColor(RachaCategory category) {
+  /// Retorna a cor do ícone com base no estilo do card, no tema e na configuração do usuário.
+  static Color getIconColor({
+    required RachaCategory category,
+    required CardStyle style,
+    required bool isLightTheme,
+    required bool useColoredIcons, // Parâmetro que vem do SettingsService
+  }) {
+    // Se o card for do estilo "colorido", o ícone sempre terá a cor do texto.
+    if (style == CardStyle.colorful) {
+      return isLightTheme ? const Color(0xFF303030) : const Color(0xFF222531);
+    }
+    // Se o card for do estilo "detalhado"...
+    else {
+      // ...a cor dependerá do valor do toggle passado como parâmetro.
+      if (useColoredIcons) {
+        // Se TRUE, usa a cor da categoria.
+        return getColor(category);
+      } else {
+        // Se FALSE, usa a cor do texto padrão do tema.
+        return isLightTheme ? AppTheme.lightTextColor : Colors.white;
+      }
+    }
+  }
+
+  /// Retorna o tamanho (largura e altura) do ícone para cada categoria.
+  static Size getIconSize(RachaCategory category) {
     switch (category) {
-      case RachaCategory.comidaEBebida:
-        return const Color(0xFFF5782C);
-      case RachaCategory.casaEContas:
-        return const Color(0xFF5592BF);
-      case RachaCategory.lazerEEventos:
-        return const Color(0xFF846AD5);
       case RachaCategory.transporte:
-        return const Color(0xFFFF5F3B);
+        return const Size(32, 32); // Exemplo de um ícone um pouco maior
       case RachaCategory.viagens:
-        return const Color(0xFF5FB92F);
+        return const Size(32, 32); // Exemplo de um ícone um pouco menor
+      // Para os outros, usamos um tamanho padrão.
+      case RachaCategory.comidaEBebida:
+        return const Size(32, 32); // Exemplo de um ícone um pouco maior
+      case RachaCategory.casaEContas:
+        return const Size(32, 32); // Exemplo de um ícone um pouco maior
+      case RachaCategory.lazerEEventos:
+        return const Size(28, 28); // Exemplo de um ícone um pouco maior
       case RachaCategory.outros:
       default:
-        // Retorna uma cor transparente se a categoria não tiver uma cor de SVG definida.
-        return Colors.transparent;
+        return const Size(32, 32); // Tamanho padrão
     }
   }
 }

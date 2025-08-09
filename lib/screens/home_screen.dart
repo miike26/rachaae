@@ -278,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final double posY = -0.20; // -1.0 (topo) a 1.0 (base)
     final double scale = 1.5; // Fator de zoom
     final double blur = 3250.0; // Intensidade do desfoque
-    final double opacity = 0.30; // Opacidade geral
+    final double opacity = 0.15; // Opacidade geral
     // -------------------------
 
     return Positioned.fill(
@@ -435,8 +435,8 @@ class _HomeScreenState extends State<HomeScreen> {
             end: Alignment.bottomCenter,
             stops: isLightTheme ? const [0.0, 0.5] : const [0.0, 0.5],
             colors: isLightTheme
-                ? [ AppTheme.lightNavBar.withOpacity(0.95), AppTheme.lightNavBar.withOpacity(0.85) ]
-                : [ AppTheme.darkNavBar.withOpacity(0.95), AppTheme.darkNavBar.withOpacity(0.90) ],
+                ? [ AppTheme.lightNavBar.withOpacity(0.95), AppTheme.lightNavBar.withOpacity(0.90) ]
+                : [ AppTheme.darkNavBar.withOpacity(0.98), AppTheme.darkNavBar.withOpacity(0.92) ],
           ),
           boxShadow: [
             BoxShadow(
@@ -584,7 +584,7 @@ class _HomeScreenState extends State<HomeScreen> {
               end: Alignment.bottomCenter,
               stops: isLightTheme ? const [0.0, 1.0] : const [0.0, 1.0],
               colors: isLightTheme
-                  ? [ AppTheme.lightFab.withOpacity(0.70), AppTheme.lightFab.withOpacity(0.90) ]
+                  ? [ AppTheme.lightFab.withOpacity(0.90), AppTheme.lightFab.withOpacity(1.0) ]
                   : [ AppTheme.darkFab1.withOpacity(0.90), AppTheme.darkFab2.withOpacity(1.00) ],
             ),
             boxShadow: [

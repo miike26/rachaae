@@ -170,6 +170,9 @@ class _PerfilPageState extends State<PerfilPage> {
               const SizedBox(height: 10),
               Consumer<SettingsService>(
                 builder: (context, settings, child) {
+                  // Variável para controlar se o toggle de ícones está ativo
+                  final bool isIconToggleEnabled = settings.cardStyle == CardStyle.detailed;
+
                   return Column(
                     children: [
                       Card(
@@ -189,6 +192,23 @@ class _PerfilPageState extends State<PerfilPage> {
                           onChanged: (value) {
                             settings.toggleCardStyle();
                           },
+                        ),
+                      ),
+                      // Card com opacidade condicional
+                      Opacity(
+                        opacity: isIconToggleEnabled ? 1.0 : 0.5,
+                        child: Card(
+                          child: SwitchListTile(
+                            title: const Text("Ícones Coloridos (Modo Detalhado)"),
+                            subtitle: const Text("Exibe ícones com a cor da categoria."),
+                            value: settings.useColoredIcons,
+                            // O switch só é habilitado se o estilo de card for "detalhado"
+                            onChanged: isIconToggleEnabled
+                                ? (value) {
+                                    settings.toggleColoredIcons();
+                                  }
+                                : null,
+                          ),
                         ),
                       ),
                     ],

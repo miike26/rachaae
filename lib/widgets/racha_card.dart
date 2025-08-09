@@ -34,6 +34,14 @@ class RachaCard extends StatelessWidget {
         final Color textColor;
         Gradient? cardGradient;
 
+        // Busca a cor do ícone usando o helper
+        final iconColor = CategoryHelper.getIconColor(
+          category: racha.category,
+          style: settings.cardStyle,
+          isLightTheme: isLightTheme,
+          useColoredIcons: settings.useColoredIcons,
+        );
+
         if (isDetailedStyle) {
           if (isLightTheme) {
             cardGradient = LinearGradient(
@@ -41,8 +49,8 @@ class RachaCard extends StatelessWidget {
               end: Alignment.topCenter,
               stops: const [0.0, 1.0],
               colors: [
-                AppTheme.lightDetailedCardBg1.withOpacity(0.50),
-                AppTheme.lightDetailedCardBg2.withOpacity(0.85)
+                AppTheme.lightDetailedCardBg1.withOpacity(0.70),
+                AppTheme.lightDetailedCardBg2.withOpacity(0.90)
               ],
             );
             textColor = AppTheme.lightTextColor;
@@ -58,17 +66,14 @@ class RachaCard extends StatelessWidget {
         }
 
         // O conteúdo do card é extraído para um widget separado para evitar repetição.
-        final cardContent = _buildCardContent(context, textColor);
+        // Passamos a cor do ícone para ele.
+        final cardContent = _buildCardContent(context, textColor, iconColor);
 
-        // --- SOLUÇÃO SEM STACK, CONFORME SUGERIDO ---
-        // Usamos uma Column e um Transform.translate para sobrepor os widgets.
         return GestureDetector(
           onTap: onTap,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // WIDGET 1: O CARD REAL COM O CONTEÚDO
-              // Ele é movido para cima para se sobrepor ao container da sombra.
               Transform.translate(
                 offset: const Offset(0, -3), // Move o card para cima
                 child: ClipRRect(
@@ -81,15 +86,10 @@ class RachaCard extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // WIDGET 2: O CONTAINER DA SOMBRA
-              // Fica "antes" no código, mas visualmente "atrás" por causa do translate.
-              // Ele não tem conteúdo, apenas a sombra.
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 17.0),
                 child: Container(
-                  height:
-                      1.5, // A altura é zero, a sombra se projeta mesmo assim
+                  height: 1.5,
                   decoration: BoxDecoration(
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(30.0),
@@ -98,10 +98,7 @@ class RachaCard extends StatelessWidget {
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.40),
-                        offset: const Offset(
-                          0,
-                          0.5,
-                        ), // A sombra é projetada para cima, mas como o card está por cima, o efeito é de sombra para baixo
+                        offset: const Offset(0, 0.5),
                         blurRadius: 6.5,
                         spreadRadius: -0.0,
                       ),
@@ -118,92 +115,39 @@ class RachaCard extends StatelessWidget {
 
   // Constrói o visual do card com fundo todo colorido
   Widget _buildColorfulView(Color backgroundColor, Widget content) {
-    final svgColor = CategoryHelper.getSvgColor(racha.category);
-    final double svgOpacity = racha.isFinished ? 0.5 : 1.0;
-
     return Container(
       color: backgroundColor,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (racha.category != RachaCategory.outros)
-            Positioned(
-              bottom: -7,
-              right: 5,
-              child: Opacity(
-                opacity: svgOpacity,
-                child: Transform.rotate(
-                  angle: -13.00 * math.pi / 180,
-                  child: SvgPicture.asset(
-                    CategoryHelper.getImagePath(racha.category),
-                    width: 120,
-                    height: 95.07,
-                    colorFilter: ColorFilter.mode(svgColor, BlendMode.srcIn),
-                  ),
-                ),
-              ),
-            ),
-          content,
-        ],
-      ),
+      child: content, // O conteúdo agora inclui o ícone, não precisa mais do Stack aqui
     );
   }
 
   // Constrói o visual do card com a barra lateral colorida
   Widget _buildDetailedView(Color? backgroundColor, Color categoryColor, Widget content, Gradient? gradient) {
-    final double svgOpacity = racha.isFinished ? 0.5 : 1.0;
-    final bool isLightTheme = gradient != null;
-
     return Container(
       decoration: BoxDecoration(
         color: backgroundColor,
         gradient: gradient,
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
+      child: Row(
         children: [
-          // Camada de fundo com a barra lateral e o conteúdo
-          Row(
-            children: [
-              Container(
-                width: 15, // Largura da barra de categoria
-                color: categoryColor,
-              ),
-              Expanded(child: content),
-            ],
+          Container(
+            width: 15, // Largura da barra de categoria
+            color: categoryColor,
           ),
-          // Camada de cima: Marca d'água SVG
-          if (racha.category != RachaCategory.outros)
-            Positioned(
-              bottom: -11,
-              right: 5,
-              child: Opacity(
-                // Aplica 80% de opacidade, e também a opacidade de 'finalizado' se aplicável.
-                opacity: svgOpacity * (isLightTheme ? 0.45 : 0.4),
-                child: Transform.rotate(
-                  angle: -13.00 * math.pi / 180,
-                  child: SvgPicture.asset(
-                    CategoryHelper.getImagePath(racha.category),
-                    width: 120,
-                    height: 95.07,
-                    colorFilter: ColorFilter.mode(
-                      isLightTheme ? AppTheme.lightTextColor : Colors.white, // Cor branca para o SVG
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          Expanded(child: content),
         ],
       ),
     );
   }
 
   // Widget que contém o conteúdo interno do card (textos, avatares, etc.)
-  Widget _buildCardContent(BuildContext context, Color textColor) {
+  Widget _buildCardContent(BuildContext context, Color textColor, Color iconColor) {
     final double textOpacity = racha.isFinished ? 0.7 : 1.0;
     final double dateOpacity = racha.isFinished ? 0.7 : 0.8;
     final double avatarOpacity = racha.isFinished ? 0.7 : 1.0;
+
+    // Busca o tamanho do ícone usando o helper
+    final iconSize = CategoryHelper.getIconSize(racha.category);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
@@ -218,7 +162,7 @@ class RachaCard extends StatelessWidget {
                 child: Text(
                   racha.title,
                   style: GoogleFonts.roboto(
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: FontWeight.w600,
                     color: textColor.withOpacity(textOpacity),
                     letterSpacing: 0.1,
@@ -232,7 +176,7 @@ class RachaCard extends StatelessWidget {
               Text(
                 'R\$ ${racha.totalAmount.toStringAsFixed(2)}',
                 style: GoogleFonts.roboto(
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: FontWeight.w500,
                   color: textColor.withOpacity(textOpacity),
                   letterSpacing: -0.33,
@@ -244,16 +188,30 @@ class RachaCard extends StatelessWidget {
           Text(
             racha.date,
             style: GoogleFonts.roboto(
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w500,
               color: textColor.withOpacity(dateOpacity),
               letterSpacing: 0.33,
             ),
           ),
           const Spacer(),
-          Opacity(
-            opacity: avatarOpacity,
-            child: _buildParticipantAvatars(),
+          // Row para alinhar avatares e o novo ícone
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Opacity(
+                opacity: avatarOpacity,
+                child: _buildParticipantAvatars(),
+              ),
+              // Ícone da categoria com tamanho dinâmico
+              SvgPicture.asset(
+                CategoryHelper.getImagePath(racha.category),
+                width: iconSize.width,  // Usa a largura do helper
+                height: iconSize.height, // Usa a altura do helper
+                colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+              ),
+            ],
           ),
         ],
       ),
@@ -270,8 +228,19 @@ class RachaCard extends StatelessWidget {
       return const SizedBox(height: 32);
     }
 
+    // --- CORREÇÃO DO ERRO ---
+    // O erro de layout ('size.isFinite') ocorria porque o Stack não tinha
+    // uma largura definida, já que todos os seus filhos eram `Positioned`.
+    // A solução é calcular a largura exata que o Stack precisa e aplicá-la
+    // ao SizedBox que o envolve.
+    //
+    // O cálculo é: a largura do primeiro avatar (30px) mais o deslocamento
+    // dos avatares restantes (23px cada).
+    final double containerWidth = itemsToShow > 0 ? 30.0 + (23.0 * (itemsToShow - 1)) : 0.0;
+
     return SizedBox(
       height: 32,
+      width: containerWidth, // Aplicando a largura calculada
       child: Stack(
         children: List.generate(
           itemsToShow,
@@ -315,7 +284,7 @@ class RachaCard extends StatelessWidget {
               ),
             );
           },
-        ),
+        ).reversed.toList(),
       ),
     );
   }
