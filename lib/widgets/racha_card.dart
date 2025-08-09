@@ -131,7 +131,7 @@ class RachaCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 15, // Largura da barra de categoria
+            width: 10, // Largura da barra de categoria
             color: categoryColor,
           ),
           Expanded(child: content),
