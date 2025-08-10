@@ -13,6 +13,7 @@ import 'friends_page.dart';
 
 import '../models/racha_model.dart';
 import '../models/user_model.dart';
+import '../models/friend_request_model.dart'; // Importa o modelo de pedido
 import '../repositories/racha_repository.dart';
 import '../repositories/local_storage_repository.dart';
 import '../repositories/firestore_repository.dart';
@@ -36,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Lógica de estado que estava em MainScreenState
   List<Racha> _rachas = [];
   late RachaRepository _rachaRepository;
+  late UserService _userService; // Adiciona o UserService
   User? _currentUser;
   bool _isInit = true;
   bool _isLoading = true;
@@ -56,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
     
     final authService = Provider.of<AuthService>(context);
     final newRepository = Provider.of<RachaRepository>(context);
+    _userService = Provider.of<UserService>(context, listen: false); // Inicializa o UserService
 
     if (_isInit || _currentUser != authService.user) {
       final previousUser = _currentUser;
@@ -235,38 +238,46 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // NOVO: Background SVG para o tema claro
-          if (isLightTheme) _buildBackgroundVector(),
-          PageView(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            children: pages,
-          ),
-          _buildFloatingHeader(headerHeight),
-          _buildCustomNavBar(navBarHeight, navBarBottomOffset, scaleFactor),
-          Positioned(
-            bottom: navBarBottomOffset + 110.0,
-            right: 17.0,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: ScaleTransition(scale: animation, child: child),
-                );
-              },
-              child: _selectedIndex == 0
-                  ? _buildCreateRachaButton(navBarHeight)
-                  : const SizedBox.shrink(key: ValueKey('emptyFab')),
-            ),
-          ),
-        ],
+      body: StreamBuilder<List<FriendRequestModel>>(
+        // O StreamBuilder agora envolve o Scaffold para ter acesso aos dados em todo o build
+        stream: _currentUser != null ? _userService.getFriendRequests() : null,
+        builder: (context, snapshot) {
+          final bool hasPendingRequests = snapshot.hasData && snapshot.data!.isNotEmpty;
+
+          return Stack(
+            children: [
+              // NOVO: Background SVG para o tema claro
+              if (isLightTheme) _buildBackgroundVector(),
+              PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                },
+                children: pages,
+              ),
+              _buildFloatingHeader(headerHeight),
+              _buildCustomNavBar(navBarHeight, navBarBottomOffset, scaleFactor, hasPendingRequests),
+              Positioned(
+                bottom: navBarBottomOffset + 110.0,
+                right: 17.0,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(scale: animation, child: child),
+                    );
+                  },
+                  child: _selectedIndex == 0
+                      ? _buildCreateRachaButton(navBarHeight)
+                      : const SizedBox.shrink(key: ValueKey('emptyFab')),
+                ),
+              ),
+            ],
+          );
+        }
       ),
     );
   }
@@ -306,6 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const List<String> titles = ['Meus Rachas', 'Amigos', 'Perfil'];
     final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
     final Color headerColor = isLightTheme ? AppTheme.lightHeaderBg : AppTheme.darkHeaderBg;
+    final authService = Provider.of<AuthService>(context, listen: false);
 
     // Define os stops do gradiente com base no tema e na opacidade do scroll
     final List<Color> colors;
@@ -363,6 +375,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               if (_selectedIndex == 1) 
                 _buildAddFriendButton(),
+              // BOTÃO DE LOGOUT
+              if (_selectedIndex == 2 && authService.user != null)
+                IconButton(
+                  icon: const Icon(Icons.logout_outlined, size: 30),
+                  onPressed: () async {
+                    await authService.signOut();
+                     if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Você saiu da sua conta.')),
+                      );
+                    }
+                  },
+                ),
             ],
           ),
         ),
@@ -409,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCustomNavBar(double navBarHeight, double navBarBottomOffset, double scaleFactor) {
+  Widget _buildCustomNavBar(double navBarHeight, double navBarBottomOffset, double scaleFactor, bool hasPendingRequests) {
     final screenWidth = MediaQuery.of(context).size.width;
     final authService = Provider.of<AuthService>(context, listen: false);
     final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
@@ -463,7 +488,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             _navBarItem(Icons.home, 'RACHAS', 0, positions[0]!, highlightWidth),
-            _navBarItem(Icons.people_alt, 'AMIGOS', 1, positions[1]!, highlightWidth),
+            _navBarItem(Icons.people_alt, 'AMIGOS', 1, positions[1]!, highlightWidth, hasNotification: hasPendingRequests),
             _navBarItem(Icons.person_outline, 'PERFIL', 2, positions[2]!, highlightWidth, authService: authService),
           ],
         ),
@@ -503,7 +528,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return {0: pos0, 1: pos1, 2: pos2, 'highlight': highlightPos};
   }
 
-  Widget _navBarItem(IconData icon, String label, int index, double leftPosition, double highlightWidth, {AuthService? authService}) {
+  Widget _navBarItem(IconData icon, String label, int index, double leftPosition, double highlightWidth, {AuthService? authService, bool hasNotification = false}) {
     final isSelected = _selectedIndex == index;
     final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
     final color = isSelected
@@ -537,26 +562,45 @@ class _HomeScreenState extends State<HomeScreen> {
       child: GestureDetector(
         onTap: () => _onItemTapped(index),
         behavior: HitTestBehavior.opaque,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            iconWidget,
-            Flexible(
-              child: AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                child: Padding(
-                  padding: EdgeInsets.only(left: isSelected ? 8.0 : 0.0),
-                  child: Text(
-                    isSelected ? label : '',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color),
-                    overflow: TextOverflow.fade,
-                    maxLines: 1,
-                    softWrap: false,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                iconWidget,
+                Flexible(
+                  child: AnimatedSize(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    child: Padding(
+                      padding: EdgeInsets.only(left: isSelected ? 8.0 : 0.0),
+                      child: Text(
+                        isSelected ? label : '',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color),
+                        overflow: TextOverflow.fade,
+                        maxLines: 1,
+                        softWrap: false,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Lógica para exibir o ponto de notificação
+            if (hasNotification && !isSelected)
+              Positioned(
+                top: 22, // Ajuste a posição vertical conforme necessário
+                right: isSelected ? null : 4, // Ajuste a posição horizontal
+                child: Container(
+                  height: 10,
+                  width: 10,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

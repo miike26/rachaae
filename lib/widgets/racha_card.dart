@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' as math;
 import 'dart:ui'; // Importado para usar o ImageFilter
 import '../models/racha_model.dart';
 import '../services/settings_service.dart';
@@ -13,11 +12,13 @@ import '../utils/color_helper.dart';
 class RachaCard extends StatelessWidget {
   final Racha racha;
   final VoidCallback onTap;
+  final bool showShadow; // Parâmetro para controlar a sombra
 
   const RachaCard({
     super.key,
     required this.racha,
     required this.onTap,
+    this.showShadow = false, // Padrão é não mostrar a sombra
   });
 
   @override
@@ -66,47 +67,35 @@ class RachaCard extends StatelessWidget {
         }
 
         // O conteúdo do card é extraído para um widget separado para evitar repetição.
-        // Passamos a cor do ícone para ele.
         final cardContent = _buildCardContent(context, textColor, iconColor);
+
+        // Lógica da sombra: Mostra se 'showShadow' for true OU se for tema claro.
+        final bool shouldDisplayShadow = showShadow || isLightTheme;
 
         return GestureDetector(
           onTap: onTap,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Transform.translate(
-                offset: const Offset(0, -3), // Move o card para cima
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24.0),
-                  child: SizedBox(
-                    height: 140.0,
-                    child: isDetailedStyle
-                        ? _buildDetailedView(cardBackgroundColor, categoryColor, cardContent, cardGradient)
-                        : _buildColorfulView(cardBackgroundColor!, cardContent),
-                  ),
+          child: Container(
+            height: 140.0,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24.0),
+              // A sombra agora é condicional tanto para exibição quanto para o tema
+              boxShadow: shouldDisplayShadow ? [
+                BoxShadow(
+                  color: isLightTheme 
+                      ? Colors.black.withOpacity(0.15) // Sombra para o tema claro
+                      : Colors.black.withOpacity(0.40), // Sombra para o tema escuro (só no card fake)
+                  blurRadius: isLightTheme ? 10 : 10,
+                  spreadRadius: isLightTheme ? -0 : -1,
+                  offset: isLightTheme ? const Offset(0, 3) : const Offset(0, 8),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 17.0),
-                child: Container(
-                  height: 1.5,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(30.0),
-                      bottomRight: Radius.circular(30.0),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.40),
-                        offset: const Offset(0, 0.5),
-                        blurRadius: 6.5,
-                        spreadRadius: -0.0,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+              ] : null,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24.0),
+              child: isDetailedStyle
+                  ? _buildDetailedView(cardBackgroundColor, categoryColor, cardContent, cardGradient)
+                  : _buildColorfulView(cardBackgroundColor!, cardContent),
+            ),
           ),
         );
       },
@@ -117,7 +106,7 @@ class RachaCard extends StatelessWidget {
   Widget _buildColorfulView(Color backgroundColor, Widget content) {
     return Container(
       color: backgroundColor,
-      child: content, // O conteúdo agora inclui o ícone, não precisa mais do Stack aqui
+      child: content,
     );
   }
 
@@ -228,14 +217,6 @@ class RachaCard extends StatelessWidget {
       return const SizedBox(height: 32);
     }
 
-    // --- CORREÇÃO DO ERRO ---
-    // O erro de layout ('size.isFinite') ocorria porque o Stack não tinha
-    // uma largura definida, já que todos os seus filhos eram `Positioned`.
-    // A solução é calcular a largura exata que o Stack precisa e aplicá-la
-    // ao SizedBox que o envolve.
-    //
-    // O cálculo é: a largura do primeiro avatar (30px) mais o deslocamento
-    // dos avatares restantes (23px cada).
     final double containerWidth = itemsToShow > 0 ? 30.0 + (23.0 * (itemsToShow - 1)) : 0.0;
 
     return SizedBox(

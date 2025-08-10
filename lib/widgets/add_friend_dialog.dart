@@ -1,18 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/user_model.dart';
 import '../services/user_service.dart';
 import '../utils/color_helper.dart';
+import '../utils/app_theme.dart';
 
 class AddFriendDialog extends StatefulWidget {
-  // --- NOVO ---
-  // Recebe os IDs dos amigos e dos pedidos já enviados
   final Set<String> friendIds;
   final Set<String> sentRequestIds;
 
   const AddFriendDialog({
-    super.key, 
+    super.key,
     required this.friendIds,
     required this.sentRequestIds,
   });
@@ -24,7 +24,7 @@ class AddFriendDialog extends StatefulWidget {
 class _AddFriendDialogState extends State<AddFriendDialog> {
   final TextEditingController _searchController = TextEditingController();
   late final UserService _userService;
-  
+
   List<UserModel> _searchResults = [];
   bool _isLoading = false;
   Timer? _debounce;
@@ -34,7 +34,7 @@ class _AddFriendDialogState extends State<AddFriendDialog> {
   void initState() {
     super.initState();
     _userService = Provider.of<UserService>(context, listen: false);
-    _sentRequests = widget.sentRequestIds; // Inicializa com os pedidos já enviados
+    _sentRequests = widget.sentRequestIds;
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -74,15 +74,19 @@ class _AddFriendDialogState extends State<AddFriendDialog> {
       setState(() {
         _sentRequests.add(recipientId);
       });
-      if(mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pedido de amizade enviado!'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Pedido de amizade enviado!'),
+              backgroundColor: Colors.green),
         );
       }
     } catch (e) {
-       if(mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao enviar pedido: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Erro ao enviar pedido: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -90,14 +94,27 @@ class _AddFriendDialogState extends State<AddFriendDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
+    final dialogBgColor = isLightTheme ? Colors.white : const Color(0xFF2D313E);
+    final containerColor = isLightTheme
+        ? const Color(0xFFFFFFFF).withOpacity(0.95)
+        : const Color(0xFF323645);
+    final textColor = isLightTheme ? AppTheme.lightTextColor : AppTheme.darkTextColor;
+    
+    // Parâmetros de fonte
+    const double titleFontSize = 16.0;
+    const double subtitleFontSize = 14.0;
+
     return Dialog(
+      backgroundColor: dialogBgColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Adicionar Amigo', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const Text('Adicionar Amigo',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             TextField(
               controller: _searchController,
@@ -105,9 +122,11 @@ class _AddFriendDialogState extends State<AddFriendDialog> {
               decoration: InputDecoration(
                 hintText: 'Buscar por e-mail ou @username',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30.0),
+                    borderSide: BorderSide.none),
                 filled: true,
-                fillColor: Colors.grey[200],
+                fillColor: isLightTheme ? Colors.grey[200] : const Color(0xFF323645),
               ),
             ),
             const SizedBox(height: 20),
@@ -118,47 +137,80 @@ class _AddFriendDialogState extends State<AddFriendDialog> {
                   : _searchResults.isEmpty
                       ? Center(
                           child: Text(
-                            _searchController.text.isEmpty ? 'Digite para buscar um amigo.' : 'Nenhum usuário encontrado.',
+                            _searchController.text.isEmpty
+                                ? 'Digite para buscar um amigo.'
+                                : 'Nenhum usuário encontrado.',
                             style: TextStyle(color: Colors.grey[600]),
                           ),
                         )
-                      : ListView.builder(
-                          itemCount: _searchResults.length,
-                          itemBuilder: (context, index) {
-                            final user = _searchResults[index];
-                            // --- LÓGICA DE STATUS ---
-                            final isFriend = widget.friendIds.contains(user.uid);
-                            final isRequestSent = _sentRequests.contains(user.uid);
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: containerColor,
+                            borderRadius: BorderRadius.circular(16.0),
+                          ),
+                          child: ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                            shrinkWrap: true,
+                            itemCount: _searchResults.length,
+                            separatorBuilder: (context, index) => const Divider(height: 15, thickness: 0, color: Colors.transparent),
+                            itemBuilder: (context, index) {
+                              final user = _searchResults[index];
+                              final isFriend = widget.friendIds.contains(user.uid);
+                              final isRequestSent = _sentRequests.contains(user.uid);
 
-                            Widget trailingWidget;
-                            if (isFriend) {
-                              trailingWidget = const Icon(Icons.check_circle, color: Colors.blue, semanticLabel: 'Amigo');
-                            } else if (isRequestSent) {
-                              trailingWidget = const Icon(Icons.hourglass_top, color: Colors.orange, semanticLabel: 'Pedido enviado');
-                            } else {
-                              trailingWidget = IconButton(
-                                icon: const Icon(Icons.person_add_alt_1_outlined, color: Colors.deepPurple),
-                                onPressed: () => _sendRequest(user.uid),
+                              Widget trailingWidget;
+                              if (isFriend) {
+                                trailingWidget = const Icon(Icons.check_circle,
+                                    color: Colors.blue, semanticLabel: 'Amigo');
+                              } else if (isRequestSent) {
+                                trailingWidget = const Icon(Icons.hourglass_top,
+                                    color: Colors.orange,
+                                    semanticLabel: 'Pedido enviado');
+                              } else {
+                                trailingWidget = IconButton(
+                                  icon: const Icon(Icons.person_add_alt_1_outlined,
+                                      color: Colors.deepPurple),
+                                  onPressed: () => _sendRequest(user.uid),
+                                );
+                              }
+
+                              return Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: ColorHelper.getColorForName(user.displayName),
+                                    backgroundImage: user.photoURL.isNotEmpty ? NetworkImage(user.photoURL) : null,
+                                    child: user.photoURL.isEmpty
+                                        ? Text( user.displayName.isNotEmpty ? user.displayName[0] : 'U', style: const TextStyle(color: Colors.white))
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          user.displayName,
+                                          style: GoogleFonts.roboto(
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor,
+                                            fontSize: titleFontSize,
+                                          ),
+                                        ),
+                                        Text(
+                                          user.username ?? user.email,
+                                          style: GoogleFonts.roboto(
+                                            color: textColor,
+                                            fontSize: subtitleFontSize,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  trailingWidget,
+                                ],
                               );
-                            }
-                            // --- FIM DA LÓGICA DE STATUS ---
-
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 4.0),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: ColorHelper.getColorForName(user.displayName),
-                                  backgroundImage: user.photoURL.isNotEmpty ? NetworkImage(user.photoURL) : null,
-                                  child: user.photoURL.isEmpty 
-                                    ? Text(user.displayName.isNotEmpty ? user.displayName[0] : 'U', style: const TextStyle(color: Colors.white))
-                                    : null,
-                                ),
-                                title: Text(user.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text(user.username ?? user.email),
-                                trailing: trailingWidget,
-                              ),
-                            );
-                          },
+                            },
+                          ),
                         ),
             ),
           ],
