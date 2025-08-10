@@ -215,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final screenWidth = MediaQuery.of(context).size.width;
     final scaleFactor = screenWidth / 448;
-    final double navBarHeight = 87.0 * scaleFactor;
+    final double navBarHeight = 82.0 * scaleFactor;
     final bool isLightTheme = Theme.of(context).brightness == Brightness.light;
 
     final List<Widget> pages = [
@@ -465,9 +465,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.25),
-              blurRadius: 48.93,
-              offset: const Offset(0, 16.31),
+              color: Colors.black.withOpacity(0.40),
+              blurRadius: 20.93,
+              offset: const Offset(0, 13),
             ),
           ],
         ),

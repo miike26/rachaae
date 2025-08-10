@@ -151,7 +151,7 @@ class RachaCard extends StatelessWidget {
                 child: Text(
                   racha.title,
                   style: GoogleFonts.roboto(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
                     color: textColor.withOpacity(textOpacity),
                     letterSpacing: 0.1,
@@ -165,7 +165,7 @@ class RachaCard extends StatelessWidget {
               Text(
                 'R\$ ${racha.totalAmount.toStringAsFixed(2)}',
                 style: GoogleFonts.roboto(
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.w500,
                   color: textColor.withOpacity(textOpacity),
                   letterSpacing: -0.33,

@@ -40,21 +40,20 @@ class AppTheme {
       onBackground: darkTextColor,
       surface: darkNavBar,
     ),
-    textTheme: GoogleFonts.robotoCondensedTextTheme(
-      ThemeData.dark().textTheme.copyWith(
-            displayLarge: const TextStyle(
-              fontSize: 55,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -2.12,
-              color: darkTextColor,
-            ),
-            labelMedium: const TextStyle(
-              fontFamily: 'Roboto',
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.33,
-            ),
-          ),
+    // CORREÇÃO: Primeiro, criamos o tema de texto base com Roboto.
+    textTheme: GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme).copyWith(
+      // Em seguida, sobrescrevemos APENAS os estilos específicos que queremos diferentes.
+      displayLarge: GoogleFonts.robotoCondensed(
+        fontSize: 55,
+        fontWeight: FontWeight.w500,
+        letterSpacing: -2.12,
+        color: darkTextColor,
+      ),
+      labelMedium: GoogleFonts.robotoCondensed(
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.33,
+      ),
     ),
   );
 
@@ -68,21 +67,20 @@ class AppTheme {
       onBackground: lightTextColor,
       surface: lightNavBar,
     ),
-    textTheme: GoogleFonts.robotoCondensedTextTheme(
-      ThemeData.light().textTheme.copyWith(
-            displayLarge: const TextStyle(
-              fontSize: 55,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -2.12,
-              color: lightTextColor,
-            ),
-            labelMedium: const TextStyle(
-              fontFamily: 'Roboto',
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.33,
-            ),
-          ),
+    // CORREÇÃO: Primeiro, criamos o tema de texto base com Roboto.
+    textTheme: GoogleFonts.robotoTextTheme(ThemeData.light().textTheme).copyWith(
+      // Em seguida, sobrescrevemos APENAS os estilos específicos que queremos diferentes.
+      displayLarge: GoogleFonts.robotoCondensed(
+        fontSize: 55,
+        fontWeight: FontWeight.w500,
+        letterSpacing: -2.12,
+        color: lightTextColor,
+      ),
+      labelMedium: GoogleFonts.robotoCondensed(
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.33,
+      ),
     ),
   );
 }
